@@ -3238,6 +3238,50 @@ function drawPreview(c, x, feet, h) {   // 選職業預覽：正面圖(有的話
 const CLS_ICON = {   // 職業選擇的武器圖示：[圖, 旋轉, 大小](暫用現有美術，之後可換成專屬圖示)
   sword: ['wpn1', 0, 60], blade: ['fx_b_blade', -0.4, 60], bow: ['fx_b_arrow', 0.785, 64], dart: ['fx_b_dart', 0, 46], healer: ['fx_star', 0, 56], demon: ['fx_b_orb', 0, 52],
 };
+// UI V2: pure Canvas decoration; no hit regions, save data or gameplay changes.
+function homeV2Frame(x,y,w,h,active=false) {
+  ctx.save();
+  const g=ctx.createLinearGradient(x,y,x+w,y+h);
+  g.addColorStop(0,active?'rgba(244,210,129,.94)':'rgba(183,149,94,.60)');
+  g.addColorStop(.5,active?'rgba(255,241,181,.85)':'rgba(115,100,73,.55)');
+  g.addColorStop(1,active?'rgba(194,134,58,.9)':'rgba(184,149,92,.58)');
+  ctx.strokeStyle=g;ctx.lineWidth=active?2.5:1.3;
+  roundRect(x,y,w,h,12);ctx.stroke();
+  const L=13;
+  ctx.strokeStyle=active?'#ffe5a1':'rgba(205,169,107,.65)';ctx.lineWidth=active?2.3:1.5;
+  for(const [cx,cy,sx,sy] of [[x+5,y+5,1,1],[x+w-5,y+5,-1,1],[x+5,y+h-5,1,-1],[x+w-5,y+h-5,-1,-1]]) {
+    ctx.beginPath();ctx.moveTo(cx+sx*L,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+sy*L);ctx.stroke();
+  }
+  ctx.restore();
+}
+function homeV2Header() {
+  ctx.save();
+  const g=ctx.createLinearGradient(0,178,0,438);
+  g.addColorStop(0,'rgba(6,29,26,.24)');g.addColorStop(.5,'rgba(7,38,35,.16)');g.addColorStop(1,'rgba(5,23,21,.32)');
+  ctx.fillStyle=g;roundRect(24,186,W-48,240,17);ctx.fill();
+  homeV2Frame(26,188,W-52,236);
+  ctx.strokeStyle='rgba(225,185,102,.45)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(266,211);ctx.lineTo(266,404);ctx.stroke();
+  ctx.fillStyle='rgba(9,39,36,.8)';roundRect(276,190,116,24,7);ctx.fill();
+  ctx.fillStyle='#e8c78c';ctx.font=`bold 13px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('江湖人物',334,202);
+  ctx.restore();
+}
+function homeV2Section(y,label) {
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.strokeStyle='rgba(220,182,110,.65)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(28,y);ctx.lineTo(187,y);ctx.moveTo(353,y);ctx.lineTo(W-28,y);ctx.stroke();
+  ctx.fillStyle='rgba(10,37,34,.92)';roundRect(194,y-11,152,22,7);ctx.fill();
+  ctx.fillStyle='#f2d49c';ctx.font=`bold 14px ${FONT}`;ctx.fillText(label,W/2,y+1);
+  ctx.restore();
+}
+function homeV2StartAccent(x,y,w,h) {
+  ctx.save();ctx.lineWidth=2;ctx.strokeStyle='rgba(255,231,169,.92)';
+  roundRect(x+5,y+5,w-10,h-10,12);ctx.stroke();
+  ctx.fillStyle='rgba(255,233,174,.85)';
+  for(const xx of [x+18,x+w-18]) {ctx.beginPath();ctx.arc(xx,y+h/2,3,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+}
 function drawTitle() {
   drawBg(); dim();
   soundBtn(W - 132, 16); acctBtn(20, 16); if (featOpen('achv')) achvBtn(80, 16); gearBtn(W - 72, 16);
@@ -3251,6 +3295,7 @@ function drawTitle() {
   if (save.cleared > 0) cpBadge(W / 2, lg ? 172 : 160, 24); else { ctx.font = `bold 19px ${FONT}`; ctx.fillStyle = '#f5d27a'; ctx.fillText('左右移動・自動出招・一路殺上山', W / 2, lg ? 172 : 160); }
   const c = clsView(save.cls);
   if (!panel(20, 182, W - 40, 248, 0.94)) { plate(24, 186, W - 48, 240, 18); }
+  homeV2Header();
   const px = 150, py = spr('ui_pedestal') ? 378 : 404;
   if (!drawIcon('ui_pedestal', px, py + 8, 172)) { const g = ctx.createRadialGradient(px, py, 4, px, py, 100); g.addColorStop(0, c.shot + 'aa'); g.addColorStop(1, c.shot + '00');
   ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(px, py, 100, 26, 0, 0, 6.283); ctx.fill(); }
@@ -3278,6 +3323,7 @@ function drawTitle() {
     if (starReady(c.id)) redDot(390, 386);
     btn(402, 382, 104, 36, '時裝', 'skins', { bg: '#5a2f7a', size: 15 });
   }
+  homeV2Section(436, '選擇門派');
   CLASSES.forEach((cc, i) => {
     const w = 76, h = 94, x = 22 + i * (w + 8), y = 440;
     const open = isUnlocked(cc), sel = cc.id === save.cls, planned = cc.atk !== undefined;
@@ -3298,20 +3344,24 @@ function drawTitle() {
     ctx.fillStyle = '#fff'; ctx.font = `bold ${cc.name.length > 3 ? 13 : 16}px ${FONT}`; ctx.fillText(cc.name, x + w / 2, y + (hasSt ? 66 : 70));
     if (hasSt) for (let k = 0; k < STAR_MAX; k++) drawStar(x + w / 2 + (k - 2) * 11.5, y + 81, 11, k < starOf(cc.id));
     if (!open) { ctx.fillStyle = '#aaa'; ctx.font = `11px ${FONT}`; ctx.fillText(cc.paid ? '商城限定' : planned ? stageLabel(cc.unlock - 1) + ' 解鎖' : '未開放', x + w / 2, y + 86); }
+    homeV2Frame(x+1,y+1,w-2,h-2,sel);
   });
   const fresh = save.cleared === 0;
   btn(W / 2 - 140, 550, 280, 70, fresh ? '開始第一戰' : '開始闖蕩', fresh ? 'first' : 'map', { size: 30 });
+  homeV2StartAccent(W/2-140,550,280,70);
   if (fresh) { const pz = (Math.sin(AT * 5) + 1) / 2; ctx.save(); ctx.strokeStyle = `rgba(255,220,120,${0.35 + pz * 0.6})`; ctx.lineWidth = 3 + pz * 3; roundRect(W / 2 - 146 - pz * 4, 544 - pz * 4, 292 + pz * 8, 82 + pz * 8, 18); ctx.stroke(); ctx.restore(); }   // 第一次進遊戲：開始按鈕發光
   if (featOpen('idle')) idleBtn(22, 540);
   if (featOpen('mail')) sideBtn(W - 112, 548, 'mail', '信箱', mailHasClaim());
   if (featOpen('event')) sideBtn(W - 112, 660, 'event', evToday().name, false);
   if (featOpen('pawn')) sideBtn(22, 660, 'pawn', '聚寶當鋪', pawnFree() || save.pawn.bag.length > 0);
+  homeV2Section(628, '江湖事務');
   fbtn(W / 2 - 140, 634, 135, 56, '修練', 'upgrade', { bg: '#2f5a8a', size: 23 });
   fbtn(W / 2 + 5, 634, 135, 56, '行囊', 'bag', { bg: '#2f6a4a', size: 23 });
   if (fbtn(W / 2 - 140, 702, 135, 56, '召喚閣', 'gacha', { bg: '#5a2f7a', size: 23 }) && (petFreeOk() || synthReady())) redDot(W / 2 - 11, 706);
   if (fbtn(W / 2 + 5, 702, 135, 56, '每日', 'daily', { bg: '#c0392b', size: 23 }) && dailyHasClaim()) redDot(W / 2 + 134, 706);
   if (fbtn(W / 2 - 140, 770, 135, 52, '商城', 'shop', { bg: '#a0731a', size: 23 }) && shopHasClaim()) redDot(W / 2 - 11, 774);
   if (fbtn(W / 2 + 5, 770, 135, 52, '俠客令', 'pass', { bg: '#7a5a1a', size: 23 }) && passClaimable()) redDot(W / 2 + 134, 774);
+  homeV2Section(838, '行走江湖');
   moneyTag(852);
   ctx.textAlign = 'center'; ctx.font = `15px ${FONT}`; ctx.fillStyle = '#ddd';
   if (!IS_TOUCH) ctx.fillText('電腦：← → 或 A D 移動　手機：手指左右拖曳', W / 2, 888);
