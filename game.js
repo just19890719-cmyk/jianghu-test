@@ -1,7 +1,7 @@
 /* 人在江湖殺 — 第 2 階段(職業、關卡、修練、音效) */
 (() => {
 'use strict';
-const BUILD = '1012-K';
+const BUILD = 'V15-ART-INTEGRATED';
 const W = 540, H = 960, HERO_Y = 800;
 const SCROLL = 150;          // 世界往下捲動速度
 const MAXU = 200;            // 分身上限
@@ -4579,68 +4579,58 @@ function drawIdle() {
   btn(50, 706, W - 100, 52, `元寶 50 立即獲得 2 小時收益(今日剩 ${idleQuickLeft()} 次)`, 'idle_quick', { bg: '#5a2f7a', size: 17, disabled: idleQuickLeft() <= 0 || save.gems < 50 });
   btn(W / 2 - 140, 830, 280, 56, '返回', 'back', { bg: '#4a3b2a', size: 23 });
 }
-// V14.1 — 獨立美術素材，僅影響一般關卡結算；圖片載入失敗會顯示保底 UI。
-const V14_ART = {};
-const V14_STATUS = {};
-// V14.1: use explicit document-relative URLs and a versioned query to avoid stale images.
-for (const [key, path] of Object.entries({panel:'v14_panel.png',primary:'v14_primary.png',jade:'v14_jade.png',small:'v14_small.png'})) {
-  const im = new Image();
-  V14_ART[key] = im;
-  V14_STATUS[key] = 'loading';
-  im.onload = () => {
-    V14_STATUS[key] = im.naturalWidth > 0 ? 'ready' : 'invalid';
-    try { if (S && S.mode === 'result') requestAnimationFrame(() => { if (S.mode === 'result') draw(); }); } catch (_) {}
-  };
-  im.onerror = () => { V14_STATUS[key] = 'error'; console.warn('[V14.1] image failed:', path, im.src); };
-  im.src = new URL(path + '?v=14.1', document.baseURI).href;
+// V15 hand-painted settlement assets. All reward values remain dynamic.
+const V15_ART = {}, V15_STATUS = {};
+for (const [key,path] of Object.entries({day:'v15_forest_day.png',night:'v15_forest_night.png',win:'v15_frame_win.png',lose:'v15_frame_lose.png',coin:'v15_coin.png',ingot:'v15_ingot.png',crystal:'v15_crystal.png',flower:'v15_flower.png'})) {
+  const im=new Image();V15_ART[key]=im;V15_STATUS[key]='loading';
+  im.onload=()=>{V15_STATUS[key]=im.naturalWidth?'ready':'invalid';try{if(S&&S.mode==='result')requestAnimationFrame(()=>{if(S.mode==='result')draw();});}catch(_){}};
+  im.onerror=()=>{V15_STATUS[key]='error';console.warn('[V15 art]',path);};
+  im.src=new URL(path+'?v=15-art-1',document.baseURI).href;
 }
-// The diagnostic appears only in ?uitest=1; it does not touch gameplay or saves.
-if (UI_TEST_MODE) {
-  const showV14Status = () => {
-    let el = document.getElementById('jh-v14-status');
-    if (!el) {
-      el = document.createElement('div'); el.id = 'jh-v14-status';
-      Object.assign(el.style, {position:'fixed',right:'8px',top:'8px',zIndex:'99999',background:'rgba(8,24,19,.92)',color:'#fff',padding:'7px 10px',border:'1px solid #d3ad68',borderRadius:'7px',font:'12px sans-serif',pointerEvents:'none'});
-      document.body.appendChild(el);
-    }
-    el.textContent = 'V14.1 美術：' + Object.entries(V14_STATUS).map(([k,v]) => k + '=' + v).join(' / ');
-  };
-  for (const key of Object.keys(V14_ART)) {
-    V14_ART[key].addEventListener('load', showV14Status);
-    V14_ART[key].addEventListener('error', showV14Status);
+if(UI_TEST_MODE){
+  const status=()=>{let el=document.getElementById('jh-v15-status');if(!el){el=document.createElement('div');el.id='jh-v15-status';Object.assign(el.style,{position:'fixed',right:'8px',top:'8px',zIndex:'99999',background:'rgba(8,24,19,.92)',color:'#fff',padding:'7px 10px',border:'1px solid #d3ad68',borderRadius:'7px',font:'12px sans-serif',pointerEvents:'none'});document.body.appendChild(el);}el.textContent='V15 美術：'+Object.entries(V15_STATUS).map(([k,v])=>k+'='+v).join(' / ');};
+  Object.values(V15_ART).forEach(im=>{im.addEventListener('load',status);im.addEventListener('error',status);});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',status,{once:true});else status();
+}
+function v15Image(key,x,y,w,h){const im=V15_ART[key];if(!im||!im.complete||!im.naturalWidth)return false;ctx.drawImage(im,x,y,w,h);return true;}
+function v14Panel(win=true){
+  ctx.save();
+  // Day and night are original hand-painted V15 scenery, not the old V14 rosewood art.
+  if(v15Image(win?'day':'night',0,0,W,H)){
+    ctx.fillStyle=win?'rgba(44,26,8,.24)':'rgba(5,15,35,.30)';ctx.fillRect(0,0,W,H);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showV14Status, {once:true});
-  else showV14Status();
-}
-function v14Image(key,x,y,w,h) {
-  const im=V14_ART[key]; if (!im || !im.complete || !im.naturalWidth) return false;
-  ctx.drawImage(im,x,y,w,h); return true;
-}
-function v14Panel() {
-  // 畫面 540×960：完整面板落在畫布內，底部按鈕不會裁切。
-  if (!v14Image('panel',10,4,520,946)) {
-    ctx.fillStyle='rgba(36,22,19,.97)';roundRect(19,12,502,932,18);ctx.fill();
-    ctx.strokeStyle='#bca071';ctx.lineWidth=3;ctx.stroke();
+  ctx.shadowColor='rgba(32,24,11,.50)';ctx.shadowBlur=19;ctx.shadowOffsetY=7;
+  const g=ctx.createLinearGradient(0,32,0,935);g.addColorStop(0,'#fff0cc');g.addColorStop(.5,'#f6e1b3');g.addColorStop(1,'#e8c48a');
+  ctx.fillStyle=g;roundRect(30,34,480,892,22);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.strokeStyle=win?'#b87930':'#77636c';ctx.lineWidth=6;roundRect(30,34,480,892,22);ctx.stroke();
+  ctx.strokeStyle='#ffe7a8';ctx.lineWidth=2;roundRect(37,41,466,878,17);ctx.stroke();
+  // Genuine V15 ornamental panel art used as a title plaque (no baked-in statistics).
+  if(!v15Image(win?'win':'lose',58,60,424,113)){
+    ctx.fillStyle=win?'#a63221':'#495367';roundRect(58,60,424,113,18);ctx.fill();
   }
+  ctx.restore();
 }
 function v14Button(x,y,w,h,label,act,kind='small',disabled=false) {
-  if (!disabled) ui.push({x,y,w,h,act});
+  if(!disabled)ui.push({x,y,w,h,act});
   ctx.save();ctx.globalAlpha=disabled?.42:1;
-  const art=kind==='ad'?'jade':kind==='primary'?'primary':'small';
-  if (!v14Image(art,x,y,w,h)) {
-    ctx.fillStyle=kind==='ad'?'#286e60':kind==='primary'?'#74382b':'#4b3127';
-    roundRect(x,y,w,h,12);ctx.fill();ctx.strokeStyle='#c9a66d';ctx.lineWidth=2;ctx.stroke();
-  }
+  ctx.shadowColor='rgba(68,33,11,.25)';ctx.shadowBlur=5;ctx.shadowOffsetY=3;
+  const g=ctx.createLinearGradient(0,y,0,y+h);
+  if(kind==='ad'){g.addColorStop(0,'#45a884');g.addColorStop(1,'#12604c');}
+  else if(kind==='primary'){g.addColorStop(0,'#ed5737');g.addColorStop(1,'#a51f20');}
+  else{g.addColorStop(0,'#b9824d');g.addColorStop(1,'#68412d');}
+  ctx.fillStyle=g;roundRect(x,y,w,h,Math.min(14,h/3));ctx.fill();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#f7ce75';ctx.lineWidth=3;roundRect(x,y,w,h,Math.min(14,h/3));ctx.stroke();
+  ctx.strokeStyle='rgba(255,242,201,.45)';ctx.lineWidth=1;roundRect(x+6,y+5,w-12,h-10,Math.min(10,h/4));ctx.stroke();
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
   ctx.font=`bold ${h>=61?26:h>=43?18:15}px ${TFONT}`;
-  ctx.lineWidth=3.5;ctx.strokeStyle='rgba(18,9,5,.95)';ctx.strokeText(label,x+w/2,y+h/2+1,w-26);
-  ctx.fillStyle='#fff0ce';ctx.fillText(label,x+w/2,y+h/2+1,w-26);
+  ctx.lineWidth=3;ctx.strokeStyle='rgba(64,23,13,.95)';ctx.strokeText(label,x+w/2,y+h/2+1,w-26);
+  ctx.fillStyle='#fff4d7';ctx.fillText(label,x+w/2,y+h/2+1,w-26);
   ctx.restore();
 }
 function v14Info(x,y,w,h,label,value,tone) {
-  ctx.save();ctx.fillStyle='rgba(20,15,16,.68)';roundRect(x,y,w,h,9);ctx.fill();
-  ctx.strokeStyle='rgba(190,151,100,.48)';ctx.lineWidth=1;ctx.stroke();
-  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#e3c9a1';ctx.font=`bold 14px ${FONT}`;ctx.fillText(label,x+w/2,y+18);
+  ctx.save();ctx.fillStyle='rgba(255,251,236,.83)';roundRect(x,y,w,h,10);ctx.fill();
+  ctx.strokeStyle='#d7a768';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#66452e';ctx.font=`bold 14px ${FONT}`;ctx.fillText(label,x+w/2,y+18);
   numText(value,x+w/2,y+43,23,tone);ctx.restore();
 }
 function drawResult() {
@@ -4649,7 +4639,7 @@ function drawResult() {
   if(S.result&&S.result.weekly){drawWeeklyResult();return;}
   const r=S.result;
   if(S._resultPageFor!==r){S._resultPageFor=r;S.resultPage=0;}
-  ctx.save();dim(.81);v14Panel();ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.save();dim(.68);v14Panel(!!r.win);ctx.textAlign='center';ctx.textBaseline='middle';
   const rewards=[];
 
 
@@ -4672,9 +4662,9 @@ function drawResult() {
   const mainY=adY+56,bottomY=mainY+75;
   // 標題落在面板原本的雕花木牌上。
   ctx.font=`900 35px ${TFONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
-  ctx.strokeStyle='#2c0c0b';ctx.strokeText(r.win?'大獲全勝':'壯烈犧牲',W/2,108,340);
-  ctx.fillStyle='#ffe3a0';ctx.fillText(r.win?'大獲全勝':'壯烈犧牲',W/2,108,340);
-  ctx.font=`bold 17px ${FONT}`;ctx.fillStyle='#f4d7a0';
+  ctx.strokeStyle='#5c1d13';ctx.strokeText(r.win?'大獲全勝':'壯烈犧牲',W/2,108,340);
+  ctx.fillStyle='#fff0ba';ctx.fillText(r.win?'大獲全勝':'壯烈犧牲',W/2,108,340);
+  ctx.font=`bold 17px ${FONT}`;ctx.fillStyle='#633820';
   ctx.fillText(`${r.hard?'困難　':''}${stageLabel(S.stage)}　${ST().name}`,W/2,171,390);
   if(r.win&&r.sub!==undefined){
     for(let k=0;k<SUBN;k++){
@@ -4682,27 +4672,31 @@ function drawResult() {
       ctx.fillStyle=on?'#ffd23a':'#615b50';ctx.beginPath();ctx.arc(x,214,k===SUBN-1?12:10,0,6.283);ctx.fill();
       ctx.fillStyle=on?'#392600':'#d6d6d6';ctx.font=`bold 11px ${FONT}`;ctx.fillText(k===SUBN-1?'首':String(k+1),x,215);
     }
-    ctx.fillStyle='#ffe09a';ctx.font=`bold 13px ${FONT}`;
+    ctx.fillStyle='#8c4e2a';ctx.font=`bold 13px ${FONT}`;
     ctx.fillText(r.first?(r.sub===SUBN-2?'下一個小關：首領！':`距離首領還有 ${SUBN-1-r.sub} 個小關`):'重打小關：銅錢照拿',W/2,257);
   }else if(r.win){
     for(let i=0;i<3;i++)drawStar(W/2+(i-1)*72,214,47,i<r.stars,true);
-    if(r.stars<3){ctx.fillStyle='#ffe09a';ctx.font=`bold 13px ${FONT}`;ctx.fillText(`差 ${Math.max(0,(r.stars===1?10:30)-r.units)} 個分身就 ${r.stars+1} 星！`,W/2,259);}
+    if(r.stars<3){ctx.fillStyle='#8c4e2a';ctx.font=`bold 13px ${FONT}`;ctx.fillText(`差 ${Math.max(0,(r.stars===1?10:30)-r.units)} 個分身就 ${r.stars+1} 星！`,W/2,259);}
   }else{
-    ctx.fillStyle='#ffb88c';ctx.font=`bold 18px ${FONT}`;
+    ctx.fillStyle='#ad4231';ctx.font=`bold 18px ${FONT}`;
     ctx.fillText(r.bossPct!=null?`首領剩餘 ${r.bossPct}% 血`:`本次進度 ${r.prog}%`,W/2,224);
   }
   const metrics=[['擊敗敵人',r.kills,'white'],['剩餘分身',r.units,'white'],['獲得銅錢',r.coins,'gold'],['獲得元寶',r.gems||0,'cyan']];
   for(let i=0;i<4;i++)v14Info(66+(i%2)*208,278+Math.floor(i/2)*69,196,61,...metrics[i]);
-  ctx.fillStyle='#f0d5a1';ctx.font=`bold 18px ${FONT}`;ctx.fillText('本次獎勵與解鎖',W/2,451);
+  v15Image('coin',76,360,31,31);v15Image('ingot',284,360,31,31);
+  ctx.fillStyle='#754022';ctx.font=`bold 18px ${FONT}`;ctx.fillText('本次獎勵與解鎖',W/2,451);
   for(let i=0;i<visible;i++){
     const rw=rewards[page*per+i],y=rowTop+i*rowGap;
-    ctx.fillStyle='rgba(21,15,15,.82)';roundRect(67,y,406,39,7);ctx.fill();
-    ctx.strokeStyle='rgba(191,150,96,.64)';ctx.lineWidth=1;ctx.stroke();
-    ctx.font=`bold 14px ${FONT}`;ctx.fillStyle=rw.c;ctx.fillText(rw.t,W/2,y+20,376);
+    ctx.fillStyle=i%2===0?'rgba(255,251,238,.94)':'rgba(244,220,178,.83)';roundRect(67,y,406,39,7);ctx.fill();
+    ctx.strokeStyle='#d3a468';ctx.lineWidth=1;ctx.stroke();
+    const iconKey=rw.t.includes('碎片')?'ico_crystal':rw.t.includes('元寶')?'ico_gem':rw.t.includes('銅錢')?'ico_coin':rw.t.includes('經驗')?'ico_exp':rw.t.includes('掉落')?'ico_chest':null;
+    if(iconKey&&!drawIcon(iconKey,91,y+19,25)){ctx.fillStyle='#c68c45';ctx.beginPath();ctx.arc(91,y+19,9,0,Math.PI*2);ctx.fill();}
+    else if(!iconKey){ctx.fillStyle='#c68c45';ctx.beginPath();ctx.arc(91,y+19,8,0,Math.PI*2);ctx.fill();}
+    ctx.font=`bold 14px ${FONT}`;ctx.fillStyle=rw.t.includes('未完成')?'#8e6554':'#66412c';ctx.fillText(rw.t,283,y+20,346);
   }
   if(pages>1){
     v14Button(74,navY,114,37,'上一頁','resultpage:-1','small',page===0);
-    ctx.font=`bold 14px ${FONT}`;ctx.fillStyle='#e8d0a6';ctx.fillText(`獎勵 ${page+1} / ${pages}`,W/2,navY+19);
+    ctx.font=`bold 14px ${FONT}`;ctx.fillStyle='#784727';ctx.fillText(`獎勵 ${page+1} / ${pages}`,W/2,navY+19);
     v14Button(352,navY,114,37,'下一頁','resultpage:1','small',page>=pages-1);
   }
   if(r.coins>0&&!r.doubled)v14Button(97,adY,346,45,`看廣告 銅錢加倍(+${r.coins})`,'addouble','ad');
