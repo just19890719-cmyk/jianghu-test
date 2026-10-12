@@ -1,6 +1,6 @@
 /* 人在江湖殺 — 1012-K 整理版；核心檔案離線預載，其餘素材按需快取 */
-const CACHE = 'jianghu-1012-K-ui-v13-result-polish-1';
-const CORE = ['./','index.html','config.js','font.js','assets.js','game.js','legal.js','manifest.json','icon-192.png','icon-512.png'];
+const CACHE = 'jianghu-1012-K-ui-v14-art-assets-1';
+const CORE = ['./','index.html','config.js','font.js','assets.js','game.js','legal.js','manifest.json','icon-192.png','icon-512.png','v14_panel.png','v14_primary.png','v14_jade.png','v14_small.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('jianghu-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
