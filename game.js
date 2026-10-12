@@ -4681,10 +4681,23 @@ function drawPause() {
   }
   ctx.globalAlpha = 1; ctx.textAlign = 'center';
 }
-function draw() { drawMain(); if (S.mode !== 'play' && S.mode !== 'loading') { cpWatch(); drawCPPops(); } drawGuide(); drawAd(); drawToast(); }
+function draw() { if (uiPreviewActive) { drawMain(); return; } drawMain(); if (S.mode !== 'play' && S.mode !== 'loading') { cpWatch(); drawCPPops(); } drawGuide(); drawAd(); drawToast(); }
 function drawMain() {
   ui = [];
   ctx.setTransform(view.s * view.d, 0, 0, view.s * view.d, 0, 0);
+  // UI test: bypass live battle entities (gates, bullets, enemies) which are not initialized in a preview.
+  if (uiPreviewActive) {
+    try { drawBg(); ui = []; drawResult(); }
+    catch (err) {
+      console.error('[UI preview]', err);
+      ctx.setTransform(view.s * view.d, 0, 0, view.s * view.d, 0, 0);
+      ctx.fillStyle = '#271a15'; ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ffb9a3'; ctx.font = `bold 23px ${FONT}`;
+      ctx.fillText('結算預覽發生錯誤', W / 2, 370);
+      ctx.font = '14px sans-serif'; ctx.fillText(String(err && err.message || err).slice(0, 60), W / 2, 410, W - 32);
+    }
+    return;
+  }
   if (S.mode === 'title') { drawTitle(); return; }
   if (S.mode === 'map') { drawMap(); return; }
   if (S.mode === 'upgrade') { drawUpgrade(); return; }
