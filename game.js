@@ -4579,47 +4579,58 @@ function drawIdle() {
   btn(50, 706, W - 100, 52, `元寶 50 立即獲得 2 小時收益(今日剩 ${idleQuickLeft()} 次)`, 'idle_quick', { bg: '#5a2f7a', size: 17, disabled: idleQuickLeft() <= 0 || save.gems < 50 });
   btn(W / 2 - 140, 830, 280, 56, '返回', 'back', { bg: '#4a3b2a', size: 23 });
 }
-function drawResult() {
-  if (S.result && S.result.endless) { drawEndlessResult(); return; }
-  if (S.result && S.result.tower) { drawTowerResult(); return; }
-  if (S.result && S.result.weekly) { drawWeeklyResult(); return; }
-  const r = S.result;
-  if (S._resultPageFor !== r) { S._resultPageFor = r; S.resultPage = 0; }
-  // V12: 所有按鈕固定在 960px 畫布內；獎勵分頁，避免掉落過多時擠出畫面。
+// V13: 結算專用視覺元件，不修改全域 btn() 或正式操作動作。
+function resultPanel(x,y,w,h,opacity=0.92) {
   ctx.save();
-  dim(0.88);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(14,38,30,.96)'; roundRect(26, 104, W - 52, 828, 20); ctx.fill();
-  ctx.lineWidth = 2; ctx.strokeStyle = '#aa9160'; ctx.stroke();
-  title(r.win ? '大獲全勝' : '壯烈犧牲', 145, 54);
-  ctx.font = `bold 19px ${FONT}`; ctx.fillStyle = '#f5d27a';
-  ctx.fillText(`${r.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`, W / 2, 204, W - 95);
-  if (r.win && r.sub !== undefined) {
-    for (let k = 0; k < SUBN; k++) {
-      const x = W / 2 + (k - 4.5) * 39, on = k <= r.sub;
-      ctx.fillStyle = on ? '#ffd23a' : '#52615a'; ctx.beginPath(); ctx.arc(x, 253, k === SUBN - 1 ? 14 : 12, 0, 6.283); ctx.fill();
-      ctx.fillStyle = on ? '#392600' : '#d6d6d6'; ctx.font = `bold 13px ${FONT}`; ctx.fillText(k === SUBN - 1 ? '首' : String(k + 1), x, 254);
-    }
-    ctx.fillStyle = '#ffe08a'; ctx.font = `bold 15px ${FONT}`;
-    ctx.fillText(r.first ? (r.sub === SUBN - 2 ? '下一個小關：首領！' : `距離首領還有 ${SUBN - 1 - r.sub} 個小關`) : '重打小關：銅錢照拿', W / 2, 290);
-  } else if (r.win) {
-    for (let i = 0; i < 3; i++) drawStar(W / 2 + (i - 1) * 76, 252, 56, i < r.stars, true);
-    if (r.stars < 3) { ctx.fillStyle = '#ffe08a'; ctx.font = `bold 15px ${FONT}`; ctx.fillText(`差 ${Math.max(0, (r.stars === 1 ? 10 : 30) - r.units)} 個分身就 ${r.stars + 1} 星！`, W / 2, 295); }
-  } else {
-    ctx.fillStyle = '#ffb08a'; ctx.font = `bold 19px ${FONT}`;
-    const msg = r.bossPct != null ? `首領剩餘 ${r.bossPct}% 血` : `本次進度 ${r.prog}%`;
-    ctx.fillText(msg, W / 2, 260);
-  }
-  // 數值採雙欄固定區塊，不會隨獎勵數量改變高度。
-  const metrics = [['擊敗敵人',r.kills,'white'],['剩餘分身',r.units,'white'],['獲得銅錢',r.coins,'gold'],['獲得元寶',r.gems || 0,'cyan']];
-  for (let i = 0; i < 4; i++) {
-    const x = 55 + (i % 2) * 220, y = 318 + Math.floor(i / 2) * 75;
-    ctx.fillStyle = 'rgba(6,20,18,.75)'; roundRect(x,y,210,65,10); ctx.fill();
-    ctx.font = `bold 15px ${FONT}`; ctx.fillStyle = '#d6cfbd'; ctx.fillText(metrics[i][0], x+105,y+17);
-    numText(metrics[i][1],x+105,y+43,25,metrics[i][2]);
-  }
-  // 獎勵資料只做顯示，不重新結算、不重複發放。
-  const rewards = [];
+  ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=20; ctx.shadowOffsetY=7;
+  const g=ctx.createLinearGradient(0,y,0,y+h);
+  g.addColorStop(0,`rgba(60,42,28,${opacity})`);
+  g.addColorStop(.45,`rgba(39,28,21,${opacity})`);
+  g.addColorStop(1,`rgba(27,22,18,${opacity})`);
+  ctx.fillStyle=g; roundRect(x,y,w,h,20); ctx.fill(); ctx.restore();
+  ctx.save(); roundRect(x,y,w,h,20); ctx.clip();
+  const shine=ctx.createLinearGradient(0,y,0,y+105);
+  shine.addColorStop(0,'rgba(246,207,132,.13)'); shine.addColorStop(1,'rgba(246,207,132,0)');
+  ctx.fillStyle=shine; ctx.fillRect(x,y,w,105);
+  // 橫向漆木細紋：輕量 Canvas 線條，無新圖片。
+  ctx.strokeStyle='rgba(240,192,117,.035)';ctx.lineWidth=1;
+  for(let yy=y+25; yy<y+h; yy+=32){ctx.beginPath();ctx.moveTo(x+22,yy);ctx.lineTo(x+w-22,yy+3);ctx.stroke();}
+  ctx.restore();
+  ctx.strokeStyle='#b4945d';ctx.lineWidth=2;roundRect(x+1,y+1,w-2,h-2,20);ctx.stroke();
+  ctx.strokeStyle='rgba(242,203,136,.25)';ctx.lineWidth=1;roundRect(x+7,y+7,w-14,h-14,15);ctx.stroke();
+}
+function resultRule(y,label) {
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`bold 17px ${FONT}`;ctx.fillStyle='#f0d5a1';ctx.fillText(label,W/2,y);
+  ctx.strokeStyle='rgba(217,179,107,.45)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(55,y);ctx.lineTo(167,y);ctx.moveTo(373,y);ctx.lineTo(485,y);ctx.stroke();ctx.restore();
+}
+function resultButton(x,y,w,h,label,act,kind='secondary',disabled=false) {
+  if(!disabled)ui.push({x,y,w,h,act});
+  ctx.save();ctx.globalAlpha=disabled?.45:1;
+  const cols={primary:['#b8402d','#762219','#45150f'],ad:['#43695e','#24453e','#1b302c'],secondary:['#66513b','#453324','#2d2119']}[kind]||['#66513b','#453324','#2d2119'];
+  const g=ctx.createLinearGradient(0,y,0,y+h);
+  g.addColorStop(0,cols[0]);g.addColorStop(.54,cols[1]);g.addColorStop(1,cols[2]);
+  ctx.fillStyle=g;roundRect(x,y,w,h,Math.min(14,h/3));ctx.fill();
+  ctx.strokeStyle='#d6b778';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle='rgba(255,226,160,.25)';ctx.lineWidth=1;roundRect(x+5,y+5,w-10,h-10,Math.min(10,h/3));ctx.stroke();
+  ctx.fillStyle='rgba(255,236,182,.13)';roundRect(x+9,y+7,w-18,Math.max(2,h*.16),4);ctx.fill();
+  const sz=h>=60?27:h>=46?18:16;
+  ctx.font=`bold ${sz}px ${TFONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  ctx.lineWidth=3;ctx.strokeStyle='rgba(20,9,5,.88)';ctx.strokeText(label,x+w/2,y+h/2+1,w-16);
+  ctx.fillStyle='#fff1d6';ctx.fillText(label,x+w/2,y+h/2+1,w-16);ctx.restore();
+}
+function drawResult() {
+  if(S.result&&S.result.endless){drawEndlessResult();return;}
+  if(S.result&&S.result.tower){drawTowerResult();return;}
+  if(S.result&&S.result.weekly){drawWeeklyResult();return;}
+  const r=S.result;
+  if(S._resultPageFor!==r){S._resultPageFor=r;S.resultPage=0;}
+  ctx.save();dim(.77);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  // 背景與獎勵的最終高度由內容決定，避免失敗畫面留下大片空白。
+  const rewards=[];
+
   if (r.frag) rewards.push({t:`${S.cls.name}碎片 +${r.frag}` + (r.tk ? `　靈寵券 +${r.tk}・裝備券 +${r.tk}` : ''), c:'#e8b4ff'});
   rewards.push({t:`俠客令經驗 +${r.pxp}` + (r.lvUp ? `　升到 Lv ${passLv()}！` : ''),c:'#ffe09a'});
   if (r.drop) { const k=r.drop.key; rewards.push({t:`${r.sub !== undefined ? '小關' : '首領'}掉落：${RAR[grar(k)]}・${gname(k)}　` + (r.drop.isNew ? 'NEW!' : r.drop.xt ? `玄鐵 +${r.drop.xt}` : r.drop.coins ? `銅錢 +${r.drop.coins}` : `升到 Lv ${r.drop.lv}`),c:RCOL[grar(k)]}); }
@@ -4629,31 +4640,66 @@ function drawResult() {
   if (r.chal) rewards.push({t:r.chal.ok ? `關卡挑戰完成！元寶 +${r.chal.g}` : `挑戰未完成：${r.chal.txt}`,c:r.chal.ok ? '#ffe9a8':'#c4b6a2'});
   if (r.feats && r.feats.length) rewards.push({t:'新功能開啟：'+r.feats.join('、'),c:'#8fffd0'});
   if (r.unlock) rewards.push({t:'解鎖新職業：'+r.unlock+'！',c:'#ffb6a5'});
-  ctx.fillStyle = '#f2d9a0'; ctx.font = `bold 18px ${FONT}`; ctx.fillText('本次獎勵與解鎖',W/2,482);
-  const per=4, pages=Math.max(1,Math.ceil(rewards.length/per)), page=clamp(S.resultPage||0,0,pages-1);
-  for(let i=0;i<per;i++) {
-    const rw=rewards[page*per+i], y=506+i*43;
-    if (!rw) continue;
-    ctx.fillStyle='rgba(8,25,21,.82)'; roundRect(48,y,444,38,9); ctx.fill();
-    ctx.strokeStyle='rgba(182,151,93,.4)'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font=`bold 16px ${FONT}`; ctx.fillStyle=rw.c;
-    ctx.fillText(rw.t,W/2,y+19,416);
+  const per=4,pages=Math.max(1,Math.ceil(rewards.length/per));
+  const page=clamp(S.resultPage||0,0,pages-1);
+  const visible=Math.min(per,rewards.length-page*per);
+  const rowTop=508,rowGap=45;
+  const navY=pages>1?rowTop+visible*rowGap+9:0;
+  const adY=Math.max(670,(pages>1?navY+51:rowTop+visible*rowGap+22));
+  const mainY=adY+65, bottomY=mainY+77;
+  resultPanel(28,91,W-56,Math.min(858,bottomY+57-91));
+  // 標題與星級留有獨立呼吸空間。
+  title(r.win?'大獲全勝':'壯烈犧牲',146,53);
+  ctx.font=`bold 18px ${FONT}`;ctx.fillStyle='#f4d7a0';
+  ctx.fillText(`${r.hard?'困難　':''}${stageLabel(S.stage)}　${ST().name}`,W/2,204,W-100);
+  if(r.win&&r.sub!==undefined){
+    for(let k=0;k<SUBN;k++){
+      const x=W/2+(k-4.5)*39,on=k<=r.sub;
+      ctx.fillStyle=on?'#ffd23a':'#615b50';ctx.beginPath();ctx.arc(x,250,k===SUBN-1?14:12,0,6.283);ctx.fill();
+      ctx.fillStyle=on?'#392600':'#d6d6d6';ctx.font=`bold 13px ${FONT}`;ctx.fillText(k===SUBN-1?'首':String(k+1),x,251);
+    }
+    ctx.fillStyle='#ffe09a';ctx.font=`bold 14px ${FONT}`;
+    ctx.fillText(r.first?(r.sub===SUBN-2?'下一個小關：首領！':`距離首領還有 ${SUBN-1-r.sub} 個小關`):'重打小關：銅錢照拿',W/2,286);
+  }else if(r.win){
+    for(let i=0;i<3;i++)drawStar(W/2+(i-1)*76,248,52,i<r.stars,true);
+    if(r.stars<3){ctx.fillStyle='#ffe09a';ctx.font=`bold 14px ${FONT}`;ctx.fillText(`差 ${Math.max(0,(r.stars===1?10:30)-r.units)} 個分身就 ${r.stars+1} 星！`,W/2,288);}
+  }else{
+    ctx.fillStyle='#ffb88c';ctx.font=`bold 18px ${FONT}`;
+    ctx.fillText(r.bossPct!=null?`首領剩餘 ${r.bossPct}% 血`:`本次進度 ${r.prog}%`,W/2,252);
   }
-  if(pages>1) {
-    btn(72,685,90,39,'◀','resultpage:-1',{bg:'#4a3b2a',size:18,disabled:page===0});
-    ctx.fillStyle='#d9c8a4'; ctx.font=`bold 16px ${FONT}`; ctx.fillText(`獎勵 ${page+1} / ${pages}`,W/2,704);
-    btn(378,685,90,39,'▶','resultpage:1',{bg:'#4a3b2a',size:18,disabled:page>=pages-1});
+  const metrics=[['擊敗敵人',r.kills,'white'],['剩餘分身',r.units,'white'],['獲得銅錢',r.coins,'gold'],['獲得元寶',r.gems||0,'cyan']];
+  for(let i=0;i<4;i++){
+    const x=55+(i%2)*220,y=307+Math.floor(i/2)*72;
+    ctx.fillStyle='rgba(18,15,12,.55)';roundRect(x,y,210,63,9);ctx.fill();
+    ctx.strokeStyle='rgba(207,170,103,.24)';ctx.lineWidth=1;ctx.stroke();
+    ctx.font=`bold 14px ${FONT}`;ctx.fillStyle='#d6c7b1';ctx.fillText(metrics[i][0],x+105,y+18);
+    numText(metrics[i][1],x+105,y+44,24,metrics[i][2]);
   }
-  // 附加行動獨立於結算獎勵區，不會推擠主要操作按鈕。
-  if(r.coins>0 && !r.doubled) btn(92,735,356,45,`看廣告 銅錢加倍(+${r.coins})`,'addouble',{bg:'#2f6a4a',size:17});
-  else if(!r.win && offerLeft()>0) btn(92,735,356,45,`限時突破禮包(剩 ${Math.ceil(offerLeft()/60000)} 分鐘)`,'gooffer',{bg:'#a0281e',size:17});
-  const next = r.win && r.sub !== undefined ? [r.sub===SUBN-2 ? '挑戰首領':'下一小關','next'] :
-    r.win && S.stage < STAGES.length-1 && (!S.hard || hardOpen(S.stage+1)) ? ['下一關','next'] : ['再戰一次','retry'];
-  btn(105,796,330,65,next[0],next[1],{size:28});
-  btn(48,873,211,49,r.win && next[1]==='next' ? (r.stars<3 && r.sub===undefined ? '再戰拿三星':'再戰一次') : '再次挑戰','retry',{bg:'#785525',size:18});
-  btn(281,873,211,49,'回到地圖','map',{bg:'#4a3b2a',size:18});
+  resultRule(478,'本次獎勵與解鎖');
+  for(let i=0;i<visible;i++){
+    const rw=rewards[page*per+i],y=rowTop+i*rowGap;
+    ctx.fillStyle='rgba(24,18,13,.67)';roundRect(47,y,446,40,8);ctx.fill();
+    ctx.strokeStyle='rgba(195,155,91,.42)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#c7a365';ctx.fillRect(59,y+11,3,18);
+    ctx.font=`bold 15px ${FONT}`;ctx.fillStyle=rw.c;
+    ctx.fillText(rw.t,W/2+3,y+20,410);
+  }
+  if(pages>1){
+    resultButton(72,navY,108,40,'上一頁','resultpage:-1','secondary',page===0);
+    ctx.font=`bold 15px ${FONT}`;ctx.fillStyle='#e8d0a6';ctx.fillText(`${page+1} / ${pages} 頁`,W/2,navY+20);
+    resultButton(360,navY,108,40,'下一頁','resultpage:1','secondary',page>=pages-1);
+  }
+  if(r.coins>0&&!r.doubled)resultButton(91,adY,358,45,`看廣告 銅錢加倍(+${r.coins})`,'addouble','ad');
+  else if(!r.win&&offerLeft()>0)resultButton(91,adY,358,45,`限時突破禮包(剩 ${Math.ceil(offerLeft()/60000)} 分鐘)`,'gooffer','ad');
+  const next=r.win&&r.sub!==undefined?[r.sub===SUBN-2?'挑戰首領':'下一小關','next']:
+    r.win&&S.stage<STAGES.length-1&&(!S.hard||hardOpen(S.stage+1))?['下一關','next']:['再戰一次','retry'];
+  resultButton(105,mainY,330,63,next[0],next[1],'primary');
+  const retryLabel=next[1]==='retry'?'重新挑戰':r.win&&r.stars<3&&r.sub===undefined?'再戰拿三星':'再戰一次';
+  resultButton(48,bottomY,211,48,retryLabel,'retry','secondary');
+  resultButton(281,bottomY,211,48,'回到地圖','map','secondary');
   ctx.restore();
 }
+
 function drawPause() {
   dim(0.65);
   const RL = [...(S.relic || [])].map(relicDef).filter(Boolean), dy = RL.length ? -70 : 0;
