@@ -2384,8 +2384,8 @@ function panel(x, y, w, h, alpha = 1) {   // 美術面板(木框＋雲紋角)，
 function fbtn(x, y, w, h, label, act, opt = {}) {   // 功能按鈕：還沒開放就顯示「通關 x-x 開啟」
   if (featOpen(act)) { btn(x, y, w, h, label, act, opt); return true; }
   btn(x, y, w, h, '', 'noop', { bg: '#555', disabled: true }); ui.push({ x, y, w, h, act: 'locked:' + act });
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#cfc6b8'; ctx.font = `${Math.round((opt.size || 23) * 0.82)}px ${TFONT}`; ctx.fillText(label, x + w / 2, y + h * 0.38);
-  ctx.fillStyle = '#ffd98a'; ctx.font = `bold 12px ${FONT}`; ctx.fillText(`通關 ${featNeed(act)} 開啟`, x + w / 2, y + h * 0.74);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin='round'; ctx.lineWidth=2.5; ctx.strokeStyle='rgba(15,18,16,.82)'; ctx.fillStyle = '#f2e8d4'; ctx.font = `${Math.round((opt.size || 23) * 0.82)}px ${TFONT}`; ctx.strokeText(label, x + w / 2, y + h * 0.38); ctx.fillText(label, x + w / 2, y + h * 0.38);
+  ctx.fillStyle = '#ffe3a3'; ctx.font = `bold 12px ${FONT}`; ctx.strokeText(`通關 ${featNeed(act)} 開啟`, x + w / 2, y + h * 0.74); ctx.fillText(`通關 ${featNeed(act)} 開啟`, x + w / 2, y + h * 0.74);
   return false;
 }
 function plate2(k, x, y, w, h) {   // 寬按鈕：左右兩半各自等比拉伸(光斑、雲紋不會被拉成長條)，離屏以裝置解析度高品質縮放
@@ -3238,7 +3238,7 @@ function drawPreview(c, x, feet, h) {   // 選職業預覽：正面圖(有的話
 const CLS_ICON = {   // 職業選擇的武器圖示：[圖, 旋轉, 大小](暫用現有美術，之後可換成專屬圖示)
   sword: ['wpn1', 0, 60], blade: ['fx_b_blade', -0.4, 60], bow: ['fx_b_arrow', 0.785, 64], dart: ['fx_b_dart', 0, 46], healer: ['fx_star', 0, 56], demon: ['fx_b_orb', 0, 52],
 };
-// UI V3: title-screen decoration only. All geometry stays inside existing bounds.
+// UI V4: title-screen readability refinement; no new headings, no input or save changes.
 // No UI hit zones, economy, combat, save state or unlock conditions are changed.
 function homeV3Panel() {
   ctx.save();
@@ -3270,12 +3270,32 @@ function homeV3ActionBackdrop() {
   // Behind the six function buttons; no text or clickable controls are covered.
   ctx.save();
   const g=ctx.createLinearGradient(0,624,0,828);
-  g.addColorStop(0,'rgba(10,30,28,.52)');
-  g.addColorStop(.5,'rgba(10,30,28,.60)');
-  g.addColorStop(1,'rgba(10,30,28,.36)');
+  g.addColorStop(0,'rgba(8,25,24,.64)');
+  g.addColorStop(.5,'rgba(8,25,24,.70)');
+  g.addColorStop(1,'rgba(8,25,24,.52)');
   ctx.fillStyle=g;roundRect(116,624,308,207,15);ctx.fill();
-  ctx.strokeStyle='rgba(199,171,110,.30)';ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(199,171,110,.20)';ctx.lineWidth=1;
   roundRect(118,626,304,203,13);ctx.stroke();
+  ctx.restore();
+}
+function homeV4FooterContrast() {
+  // Quiet backdrop in existing empty footer area, never over buttons.
+  ctx.save();
+  const g = ctx.createLinearGradient(0,832,0,915);
+  g.addColorStop(0,'rgba(9,25,22,0)');
+  g.addColorStop(.35,'rgba(9,25,22,.52)');
+  g.addColorStop(1,'rgba(9,25,22,.26)');
+  ctx.fillStyle=g; roundRect(74,834,392,80,15); ctx.fill();
+  ctx.restore();
+}
+function homeV4LockedCardText(x,y,w,cc,planned) {
+  // Improve small grey-on-grey text; keep card geometry unchanged.
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=`bold 12px ${FONT}`;
+  ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.strokeStyle='rgba(0,0,0,.78)';
+  const line=cc.paid ? '商城限定' : planned ? stageLabel(cc.unlock - 1)+' 解鎖' : '未開放';
+  ctx.strokeText(line,x+w/2,y+86);ctx.fillStyle='#f0dfbd';ctx.fillText(line,x+w/2,y+86);
   ctx.restore();
 }
 function drawTitle() {
@@ -3337,7 +3357,7 @@ function drawTitle() {
     const hasSt = open && starOf(cc.id) > 0;
     ctx.fillStyle = '#fff'; ctx.font = `bold ${cc.name.length > 3 ? 13 : 16}px ${FONT}`; ctx.fillText(cc.name, x + w / 2, y + (hasSt ? 66 : 70));
     if (hasSt) for (let k = 0; k < STAR_MAX; k++) drawStar(x + w / 2 + (k - 2) * 11.5, y + 81, 11, k < starOf(cc.id));
-    if (!open) { ctx.fillStyle = '#aaa'; ctx.font = `11px ${FONT}`; ctx.fillText(cc.paid ? '商城限定' : planned ? stageLabel(cc.unlock - 1) + ' 解鎖' : '未開放', x + w / 2, y + 86); }
+    if (!open) homeV4LockedCardText(x,y,w,cc,planned);
     homeV3ClassAccent(x,y,w,h,sel);
   });
   // Render section title after class cards so the card sprites cannot cover it.
@@ -3357,6 +3377,7 @@ function drawTitle() {
   if (fbtn(W / 2 - 140, 770, 135, 52, '商城', 'shop', { bg: '#a0731a', size: 23 }) && shopHasClaim()) redDot(W / 2 - 11, 774);
   if (fbtn(W / 2 + 5, 770, 135, 52, '俠客令', 'pass', { bg: '#7a5a1a', size: 23 }) && passClaimable()) redDot(W / 2 + 134, 774);
   // Render section title after function-button sprites for guaranteed visibility.
+  homeV4FooterContrast();
   moneyTag(852);
   ctx.textAlign = 'center'; ctx.font = `15px ${FONT}`; ctx.fillStyle = '#ddd';
   if (!IS_TOUCH) ctx.fillText('電腦：← → 或 A D 移動　手機：手指左右拖曳', W / 2, 888);
