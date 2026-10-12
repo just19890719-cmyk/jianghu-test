@@ -4579,12 +4579,38 @@ function drawIdle() {
   btn(50, 706, W - 100, 52, `元寶 50 立即獲得 2 小時收益(今日剩 ${idleQuickLeft()} 次)`, 'idle_quick', { bg: '#5a2f7a', size: 17, disabled: idleQuickLeft() <= 0 || save.gems < 50 });
   btn(W / 2 - 140, 830, 280, 56, '返回', 'back', { bg: '#4a3b2a', size: 23 });
 }
-// V14 — 獨立美術素材，僅影響一般關卡結算；圖片載入失敗會顯示保底 UI。
+// V14.1 — 獨立美術素材，僅影響一般關卡結算；圖片載入失敗會顯示保底 UI。
 const V14_ART = {};
+const V14_STATUS = {};
+// V14.1: use explicit document-relative URLs and a versioned query to avoid stale images.
 for (const [key, path] of Object.entries({panel:'v14_panel.png',primary:'v14_primary.png',jade:'v14_jade.png',small:'v14_small.png'})) {
-  const im = new Image(); V14_ART[key] = im;
-  im.onload = () => { try { if (S && S.mode === 'result') draw(); } catch (_) {} };
-  im.src = path;
+  const im = new Image();
+  V14_ART[key] = im;
+  V14_STATUS[key] = 'loading';
+  im.onload = () => {
+    V14_STATUS[key] = im.naturalWidth > 0 ? 'ready' : 'invalid';
+    try { if (S && S.mode === 'result') requestAnimationFrame(() => { if (S.mode === 'result') draw(); }); } catch (_) {}
+  };
+  im.onerror = () => { V14_STATUS[key] = 'error'; console.warn('[V14.1] image failed:', path, im.src); };
+  im.src = new URL(path + '?v=14.1', document.baseURI).href;
+}
+// The diagnostic appears only in ?uitest=1; it does not touch gameplay or saves.
+if (UI_TEST_MODE) {
+  const showV14Status = () => {
+    let el = document.getElementById('jh-v14-status');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'jh-v14-status';
+      Object.assign(el.style, {position:'fixed',right:'8px',top:'8px',zIndex:'99999',background:'rgba(8,24,19,.92)',color:'#fff',padding:'7px 10px',border:'1px solid #d3ad68',borderRadius:'7px',font:'12px sans-serif',pointerEvents:'none'});
+      document.body.appendChild(el);
+    }
+    el.textContent = 'V14.1 美術：' + Object.entries(V14_STATUS).map(([k,v]) => k + '=' + v).join(' / ');
+  };
+  for (const key of Object.keys(V14_ART)) {
+    V14_ART[key].addEventListener('load', showV14Status);
+    V14_ART[key].addEventListener('error', showV14Status);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showV14Status, {once:true});
+  else showV14Status();
 }
 function v14Image(key,x,y,w,h) {
   const im=V14_ART[key]; if (!im || !im.complete || !im.naturalWidth) return false;
