@@ -1,0 +1,122 @@
+[
+  {
+    "file": "README.md",
+    "bytes": 1273,
+    "sha256": "4ff02c9611c2df905008572e4eb6eef308c0cb64a2ecc1fc95d4ac1af0413d99"
+  },
+  {
+    "file": "apple-touch-icon.png",
+    "bytes": 1676,
+    "sha256": "c98b656b4109c6bbd663cfa73f9ac49df664cf17e6e985d0be1f0b1223fea45a"
+  },
+  {
+    "file": "assets.js",
+    "bytes": 1245082,
+    "sha256": "dc0f59f076b677bff7411d355888ab987ad3a686a24cba907151c73dec319836"
+  },
+  {
+    "file": "assets_atk.js",
+    "bytes": 1165613,
+    "sha256": "e6712d88b868486256e57fb04735b0e1be20ff770cf94337df9f0515b7d73b15"
+  },
+  {
+    "file": "assets_ch2.js",
+    "bytes": 325426,
+    "sha256": "515676029712c65bd4336191a95bfb302c123461e974dc0f751b53d9d3f3aa88"
+  },
+  {
+    "file": "assets_ch3.js",
+    "bytes": 293072,
+    "sha256": "a02962c7201deeca0f8626d421b3bdcff82b46961db5e2f6585c8fd48599af3a"
+  },
+  {
+    "file": "assets_ch4.js",
+    "bytes": 475020,
+    "sha256": "9c49781138c798b6300e9de492c7d0c40ffdaea91b1ea8ae5590a270a0825a57"
+  },
+  {
+    "file": "assets_ch5.js",
+    "bytes": 434486,
+    "sha256": "7136feb2d1eb873f0c228cdca5b1838bf4cf06a87beec41dab92178bfc8eec01"
+  },
+  {
+    "file": "assets_ch6.js",
+    "bytes": 327351,
+    "sha256": "4d9092b8e934f835561d91fc541912a07b249ff8ffe81e9a350ba9be9f107c1b"
+  },
+  {
+    "file": "assets_ch7.js",
+    "bytes": 784066,
+    "sha256": "e70525cd14acead0a82be1b57e0ab0117dac7849e2dbe987bccaaa3a749d74b2"
+  },
+  {
+    "file": "assets_fx.js",
+    "bytes": 568968,
+    "sha256": "d33d7f4af055cee643003a73fc3c536a9877675f07bf4877b49268da33c7fa8f"
+  },
+  {
+    "file": "assets_pawn.js",
+    "bytes": 1505794,
+    "sha256": "0e7443cb8808de193215538467d3d9a6684db80da6705f9e6fc425993ee858a1"
+  },
+  {
+    "file": "assets_skin.js",
+    "bytes": 275926,
+    "sha256": "47e98eb3f85cf7c67af517b1207cea389655abb0577065d86c3146c75738fba4"
+  },
+  {
+    "file": "assets_ui.js",
+    "bytes": 1665364,
+    "sha256": "66a00f1e12dc4350d4b608bc9e6f5510671e5ca6149d52cf1ab8f997ab471360"
+  },
+  {
+    "file": "config.js",
+    "bytes": 413,
+    "sha256": "f5e82756cdc1a7850d4de3cf74afffcb1d0fcdc8f12af259900eb1247daf7290"
+  },
+  {
+    "file": "font.js",
+    "bytes": 665989,
+    "sha256": "59e0ca20a9f62061cb4085873de1d5970d2d2a778aa98e7120152eba1c1c9578"
+  },
+  {
+    "file": "game.js",
+    "bytes": 454489,
+    "sha256": "519040580c55ff5dae84fc77fa1784968091b4310693dfa50b786e9c52b2150e"
+  },
+  {
+    "file": "icon-192.png",
+    "bytes": 1844,
+    "sha256": "eb333a731c252f95d7268865d9e41a2a99e262176db7f37696eeebbb2fa20cbf"
+  },
+  {
+    "file": "icon-512.png",
+    "bytes": 5427,
+    "sha256": "d3e9c18e68b71772a66859ffa3a63d38f0dc1bd8685be078d1b30c8c9d5e40fd"
+  },
+  {
+    "file": "index.html",
+    "bytes": 1549,
+    "sha256": "aa0fa4230a1336256c3fc8e06da371316a15dff38ddb1349dd4a7fc7ef656439"
+  },
+  {
+    "file": "legal.html",
+    "bytes": 17631,
+    "sha256": "4806f95a6355c10ef9ecd91258f69e0a185ce845b508d9def2d1447efb377803"
+  },
+  {
+    "file": "legal.js",
+    "bytes": 17410,
+    "sha256": "6f2b0b800bb8565f584b696daa3265e66f2d0f886b99e0ef4b3f7fcd4da1ea2d"
+  },
+  {
+    "file": "manifest.json",
+    "bytes": 505,
+    "sha256": "00f73fbe77a09b08248f6374153e3af84f0a1cc6b4547af1c2f78e8d0c457349"
+  },
+  {
+    "file": "sw.js",
+    "bytes": 1027,
+    "sha256": "72c4286fd85a30601d5387de9a2a9c8991c3125e024bd6bd371a0be18a0c9430"
+  }
+]
