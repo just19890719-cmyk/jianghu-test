@@ -12,6 +12,7 @@ const ctx = cv.getContext('2d');
 const wrap = document.getElementById('wrap') || document.body;
 const view = { s: 1, d: 1 };
 const PERF_MOB = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const UI_TEST_MODE = /[?&]uitest=1(?:&|$)/.test(location.search);
 const DEBUG_MODE = /[?&]dev=1/.test(location.search) || !!window.JH_TEST;   // 測試工具總開關：正式環境一律隱藏
 const PERF = (() => { let m = null; try { m = JSON.parse(localStorage.getItem('jh_perf2') || 'null'); } catch (e) {}   // 記住這支手機適合的畫質，下次開遊戲直接用
   return { dtop: PERF_MOB ? 2 : 2, dmax: m && m.dmax ? m.dmax : PERF_MOB ? 1.8 : 2, good: 0, acc: 0, n: 0, slowT: 0, autoLow: !!(m && m.low), warm: 0 }; })();
@@ -2154,6 +2155,7 @@ const drag = { on: false, px0: 0, px: 0, hx0: 0 };
 
 let AT = 0;   // 介面動畫用的時間
 function update(dt) {
+  if (uiPreviewActive) return;
   AT += dt; cloudTick(dt); adTick(dt); bgmTick(); evTick(dt);
   if (S.mode === 'loading') { S.waitT += dt; if (chunkReady(STAGES[S.waitStage].ch) || S.waitT > 15) { const fn = S.waitFn; S.waitFn = null; if (fn) fn(); else newRun(S.waitStage); } }
   if (S.mode === 'revive' && !S.ad && !S.modal && (S.reviveT -= dt) <= 0) { S.revived = true; S.mode = 'play'; endRun(false); }
@@ -4581,50 +4583,76 @@ function drawResult() {
   if (S.result && S.result.endless) { drawEndlessResult(); return; }
   if (S.result && S.result.tower) { drawTowerResult(); return; }
   if (S.result && S.result.weekly) { drawWeeklyResult(); return; }
-  dim(0.72);
-  const r = S.result; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title(r.win ? '大獲全勝' : '壯烈犧牲', 210, 60);
-  ctx.font = `bold 20px ${FONT}`; ctx.fillStyle = r.hard ? '#ff8ab0' : '#f5d27a'; ctx.fillText(`${r.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`, W / 2, 268);
-  if (r.win && r.sub !== undefined) {   // 小關：顯示這一關 10 個小關的進度
-    for (let k = 0; k < SUBN; k++) { const x = W / 2 + (k - 4.5) * 40, on = k <= r.sub, bossK = k === SUBN - 1; ctx.fillStyle = on ? '#ffd23a' : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x, 330, bossK ? 15 : 12, 0, 6.283); ctx.fill(); if (k === r.sub) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); } ctx.fillStyle = on ? '#3a1a00' : '#bbb'; ctx.font = `900 ${bossK ? 15 : 14}px ${FONT}`; ctx.fillText(bossK ? '首' : String(k + 1), x, 331); }
-    ctx.fillStyle = '#ffe08a'; ctx.font = `bold 18px ${FONT}`; ctx.fillText(r.first ? (r.sub === SUBN - 2 ? '下一個小關：首領！' : `小關突破！還差 ${SUBN - 1 - r.sub} 個小關到首領`) : '重打小關：銅錢照拿', W / 2, 372);
-  } else if (r.win) { for (let i = 0; i < 3; i++) { const pz = i < r.stars ? 1 + Math.max(0, 0.4 - Math.abs(AT % 3 - i * 0.15)) * 0.3 : 1; drawStar(W / 2 + (i - 1) * 80, 335, 62 * pz, i < r.stars, true); }
-    if (r.stars < 3) { const need = (r.stars === 1 ? 10 : 30) - r.units, pz = 1 + Math.sin(AT * 6) * 0.04; ctx.save(); ctx.translate(W / 2, 372); ctx.scale(pz, pz); ctx.fillStyle = '#ffe08a'; ctx.font = `bold 18px ${FONT}`; ctx.fillText(`差 ${need} 個分身就 ${r.stars + 1} 星！`, 0, 0); ctx.restore(); } }
-  else { const pz = 1 + Math.sin(AT * 6) * 0.04; ctx.save(); ctx.translate(W / 2, 330); ctx.scale(pz, pz); ctx.fillStyle = '#ffb08a'; ctx.font = `bold 22px ${FONT}`; ctx.fillText(r.bossPct !== null ? (r.bossPct <= 35 ? `差一點！首領只剩 ${r.bossPct}% 血` : `首領還剩 ${r.bossPct}% 血，變強再來！`) : (r.prog >= 70 ? `差一點！已經走完 ${r.prog}%` : `走到 ${r.prog}%，再試一次！`), 0, 0); ctx.restore(); }
-  ctx.font = `bold 23px ${FONT}`; ctx.fillStyle = '#fff';
-  statLine('擊敗敵人', r.kills, 400);
-  statLine('剩餘分身', r.units, 436);
-  statLine('獲得銅錢', r.coins, 472, 'gold', r.ev ? `${r.ev} ×2` : '');
-  let by = 494;
-  if (r.gems) { statLine('獲得元寶', r.gems, 508, 'cyan'); by = 530; }
-  if (r.frag) { ctx.font = `bold 17px ${FONT}`; ctx.fillStyle = '#e8b4ff'; ctx.fillText(`${S.cls.name}碎片 +${r.frag}` + (r.tk ? `　靈寵券 +${r.tk}・裝備券 +${r.tk}` : ''), W / 2, by + 6); by += 24; }
-  ctx.font = `bold 17px ${FONT}`; ctx.fillStyle = r.lvUp ? '#ffc23a' : '#c9a86a'; ctx.fillText(`俠客令經驗 +${r.pxp}` + (r.lvUp ? `　升到 Lv ${passLv()}！` : ''), W / 2, by + 6); by += 26;
-  if (r.drop) {
-    const k = r.drop.key, rc = RCOL[grar(k)];
-    ctx.save(); ctx.shadowColor = rc; ctx.shadowBlur = grar(k) >= 2 ? 20 : 0;
-    plate(60, by, W - 120, 46, 12); ctx.restore();
-    ctx.lineWidth = 2; ctx.strokeStyle = rc; roundRect(60, by, W - 120, 46, 12); ctx.stroke();
-    ctx.fillStyle = rc; ctx.font = `bold 20px ${FONT}`;
-    ctx.fillText(`${r.sub !== undefined ? '小關' : '首領'}掉落：${RAR[grar(k)]}・${gname(k)}　` + (r.drop.isNew ? 'NEW!' : r.drop.xt ? `玄鐵 +${r.drop.xt}` : r.drop.coins ? `銅錢+${r.drop.coins}` : `升到 Lv ${r.drop.lv}`), W / 2, by + 24);
-    by += 54;
+  const r = S.result;
+  if (S._resultPageFor !== r) { S._resultPageFor = r; S.resultPage = 0; }
+  // V12: 所有按鈕固定在 960px 畫布內；獎勵分頁，避免掉落過多時擠出畫面。
+  ctx.save();
+  dim(0.88);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(14,38,30,.96)'; roundRect(26, 104, W - 52, 828, 20); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#aa9160'; ctx.stroke();
+  title(r.win ? '大獲全勝' : '壯烈犧牲', 145, 54);
+  ctx.font = `bold 19px ${FONT}`; ctx.fillStyle = '#f5d27a';
+  ctx.fillText(`${r.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`, W / 2, 204, W - 95);
+  if (r.win && r.sub !== undefined) {
+    for (let k = 0; k < SUBN; k++) {
+      const x = W / 2 + (k - 4.5) * 39, on = k <= r.sub;
+      ctx.fillStyle = on ? '#ffd23a' : '#52615a'; ctx.beginPath(); ctx.arc(x, 253, k === SUBN - 1 ? 14 : 12, 0, 6.283); ctx.fill();
+      ctx.fillStyle = on ? '#392600' : '#d6d6d6'; ctx.font = `bold 13px ${FONT}`; ctx.fillText(k === SUBN - 1 ? '首' : String(k + 1), x, 254);
+    }
+    ctx.fillStyle = '#ffe08a'; ctx.font = `bold 15px ${FONT}`;
+    ctx.fillText(r.first ? (r.sub === SUBN - 2 ? '下一個小關：首領！' : `距離首領還有 ${SUBN - 1 - r.sub} 個小關`) : '重打小關：銅錢照拿', W / 2, 290);
+  } else if (r.win) {
+    for (let i = 0; i < 3; i++) drawStar(W / 2 + (i - 1) * 76, 252, 56, i < r.stars, true);
+    if (r.stars < 3) { ctx.fillStyle = '#ffe08a'; ctx.font = `bold 15px ${FONT}`; ctx.fillText(`差 ${Math.max(0, (r.stars === 1 ? 10 : 30) - r.units)} 個分身就 ${r.stars + 1} 星！`, W / 2, 295); }
+  } else {
+    ctx.fillStyle = '#ffb08a'; ctx.font = `bold 19px ${FONT}`;
+    const msg = r.bossPct != null ? `首領剩餘 ${r.bossPct}% 血` : `本次進度 ${r.prog}%`;
+    ctx.fillText(msg, W / 2, 260);
   }
-  if (r.drop2) { const k2 = r.drop2.key, rc2 = RCOL[grar(k2)]; ctx.fillStyle = 'rgba(40,60,30,.92)'; roundRect(60, by, W - 120, 40, 12); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = rc2; ctx.stroke();
-    ctx.fillStyle = rc2; ctx.font = `bold 17px ${FONT}`; ctx.fillText(`首通加碼：${RAR[grar(k2)]}・${gname(k2)}　` + (r.drop2.isNew ? 'NEW!' : r.drop2.xt ? `玄鐵 +${r.drop2.xt}` : ''), W / 2, by + 21); by += 48; }
-  if (r.myth) { ctx.fillStyle = 'rgba(120,20,20,.92)'; roundRect(60, by, W - 120, 40, 12); ctx.fill(); ctx.strokeStyle = RCOL[5]; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#ffd0d0'; ctx.font = `bold 18px ${FONT}`; ctx.fillText(`首通獎勵：神話・${gname(r.myth.key)}` + (r.myth.isNew ? '　NEW!' : '　神話精魄 +1'), W / 2, by + 21); by += 48; }
-  if (r.old) { ctx.fillStyle = 'rgba(70,40,15,.92)'; roundRect(60, by, W - 120, 40, 12); ctx.fill(); ctx.fillStyle = '#ffd98a'; ctx.font = `bold 17px ${FONT}`; ctx.fillText(`撿到舊物：${r.old}(到聚寶當鋪打開)`, W / 2, by + 21); by += 48; }
-  if (r.chal) { ctx.fillStyle = r.chal.ok ? 'rgba(120,80,10,.92)' : 'rgba(40,30,22,.85)'; roundRect(60, by, W - 120, 40, 12); ctx.fill(); if (r.chal.ok) { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.stroke(); }
-    ctx.fillStyle = r.chal.ok ? '#ffe9a8' : '#bfb3a0'; ctx.font = `bold 17px ${FONT}`; ctx.fillText(r.chal.ok ? `關卡挑戰完成！元寶 +${r.chal.g}` : `挑戰未完成：${r.chal.txt}`, W / 2, by + 21); by += 48; }
-  if (r.feats && r.feats.length) { const pz = 1 + Math.sin(AT * 6) * 0.03; ctx.save(); ctx.translate(W / 2, by + 23); ctx.scale(pz, pz); ctx.fillStyle = 'rgba(30,90,60,.95)'; roundRect(-(W - 120) / 2, -23, W - 120, 46, 12); ctx.fill(); ctx.strokeStyle = '#8fffd0'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#e8fff4'; ctx.font = `bold 20px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('新功能開啟：' + r.feats.join('、'), 0, 1); ctx.restore(); by += 54; }
-  if (r.unlock) { ctx.fillStyle = 'rgba(122,31,31,.9)'; roundRect(60, by, W - 120, 46, 12); ctx.fill(); ctx.fillStyle = '#ffe9a8'; ctx.font = `bold 22px ${FONT}`; ctx.fillText('解鎖新職業：' + r.unlock + '！', W / 2, by + 24); by += 54; }
-  if (r.coins > 0 && !r.doubled) { btn(90, by, W - 180, 44, `看廣告 銅錢加倍(+${r.coins})`, 'addouble', { bg: '#2f6a4a', size: 18 }); by += 54; }
-  if (!r.win && offerLeft() > 0) { btn(90, by, W - 180, 44, `限時突破禮包(剩 ${Math.ceil(offerLeft() / 60000)} 分鐘)`, 'gooffer', { bg: '#a0281e', border: '#ffd700', size: 18 }); by += 54; }
-  let y = Math.max(590, by + 14);
-  // 下方按鈕：主要按鈕一顆大的，次要的兩顆並排，避免畫面太長被切掉
-  const half = (l, a, o) => [btn(W / 2 - 150, y, 145, 56, l, a, Object.assign({ size: 19 }, o)), btn(W / 2 + 5, y, 145, 56, '回到地圖', 'map', { bg: '#4a3b2a', size: 19 })];
-  if (r.win && r.sub !== undefined) { btn(W / 2 - 150, y, 300, 76, r.sub === SUBN - 2 ? '挑戰首領' : '下一小關', 'next', { size: 30 }); y += 88; half('再打一次', 'retry', { bg: '#7a4a1f' }); }
-  else if (r.win && S.stage < STAGES.length - 1 && (!S.hard || hardOpen(S.stage + 1))) { btn(W / 2 - 150, y, 300, 76, '下一關', 'next', { size: 30 }); y += 88; half(r.stars < 3 ? '再戰拿三星' : '再戰一次', 'retry', { bg: r.stars < 3 ? '#a0731a' : '#7a4a1f' }); }
-  else if (r.win) { btn(W / 2 - 150, y, 300, 70, '再戰一次', 'retry'); y += 84; btn(W / 2 - 140, y, 280, 56, '回到地圖', 'map', { bg: '#4a3b2a', size: 22 }); }
-  else { btn(W / 2 - 160, y, 320, 84, '再戰一次', 'retry', { size: 34 }); y += 96; if (featOpen('upgrade')) half('去修練', 'upgrade', { bg: '#2f5a8a' }); else btn(W / 2 - 140, y, 280, 56, '回到地圖', 'map', { bg: '#4a3b2a', size: 22 }); }
+  // 數值採雙欄固定區塊，不會隨獎勵數量改變高度。
+  const metrics = [['擊敗敵人',r.kills,'white'],['剩餘分身',r.units,'white'],['獲得銅錢',r.coins,'gold'],['獲得元寶',r.gems || 0,'cyan']];
+  for (let i = 0; i < 4; i++) {
+    const x = 55 + (i % 2) * 220, y = 318 + Math.floor(i / 2) * 75;
+    ctx.fillStyle = 'rgba(6,20,18,.75)'; roundRect(x,y,210,65,10); ctx.fill();
+    ctx.font = `bold 15px ${FONT}`; ctx.fillStyle = '#d6cfbd'; ctx.fillText(metrics[i][0], x+105,y+17);
+    numText(metrics[i][1],x+105,y+43,25,metrics[i][2]);
+  }
+  // 獎勵資料只做顯示，不重新結算、不重複發放。
+  const rewards = [];
+  if (r.frag) rewards.push({t:`${S.cls.name}碎片 +${r.frag}` + (r.tk ? `　靈寵券 +${r.tk}・裝備券 +${r.tk}` : ''), c:'#e8b4ff'});
+  rewards.push({t:`俠客令經驗 +${r.pxp}` + (r.lvUp ? `　升到 Lv ${passLv()}！` : ''),c:'#ffe09a'});
+  if (r.drop) { const k=r.drop.key; rewards.push({t:`${r.sub !== undefined ? '小關' : '首領'}掉落：${RAR[grar(k)]}・${gname(k)}　` + (r.drop.isNew ? 'NEW!' : r.drop.xt ? `玄鐵 +${r.drop.xt}` : r.drop.coins ? `銅錢 +${r.drop.coins}` : `升到 Lv ${r.drop.lv}`),c:RCOL[grar(k)]}); }
+  if (r.drop2) { const k=r.drop2.key; rewards.push({t:`首通加碼：${RAR[grar(k)]}・${gname(k)}　`+(r.drop2.isNew ? 'NEW!' : r.drop2.xt ? `玄鐵 +${r.drop2.xt}` : ''),c:RCOL[grar(k)]}); }
+  if (r.myth) rewards.push({t:`首通獎勵：神話・${gname(r.myth.key)}`+(r.myth.isNew ? ' NEW!' : '　神話精魄 +1'),c:'#ffd0d0'});
+  if (r.old) rewards.push({t:`撿到舊物：${r.old}(到聚寶當鋪打開)`,c:'#ffd98a'});
+  if (r.chal) rewards.push({t:r.chal.ok ? `關卡挑戰完成！元寶 +${r.chal.g}` : `挑戰未完成：${r.chal.txt}`,c:r.chal.ok ? '#ffe9a8':'#c4b6a2'});
+  if (r.feats && r.feats.length) rewards.push({t:'新功能開啟：'+r.feats.join('、'),c:'#8fffd0'});
+  if (r.unlock) rewards.push({t:'解鎖新職業：'+r.unlock+'！',c:'#ffb6a5'});
+  ctx.fillStyle = '#f2d9a0'; ctx.font = `bold 18px ${FONT}`; ctx.fillText('本次獎勵與解鎖',W/2,482);
+  const per=4, pages=Math.max(1,Math.ceil(rewards.length/per)), page=clamp(S.resultPage||0,0,pages-1);
+  for(let i=0;i<per;i++) {
+    const rw=rewards[page*per+i], y=506+i*43;
+    if (!rw) continue;
+    ctx.fillStyle='rgba(8,25,21,.82)'; roundRect(48,y,444,38,9); ctx.fill();
+    ctx.strokeStyle='rgba(182,151,93,.4)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font=`bold 16px ${FONT}`; ctx.fillStyle=rw.c;
+    ctx.fillText(rw.t,W/2,y+19,416);
+  }
+  if(pages>1) {
+    btn(72,685,90,39,'◀','resultpage:-1',{bg:'#4a3b2a',size:18,disabled:page===0});
+    ctx.fillStyle='#d9c8a4'; ctx.font=`bold 16px ${FONT}`; ctx.fillText(`獎勵 ${page+1} / ${pages}`,W/2,704);
+    btn(378,685,90,39,'▶','resultpage:1',{bg:'#4a3b2a',size:18,disabled:page>=pages-1});
+  }
+  // 附加行動獨立於結算獎勵區，不會推擠主要操作按鈕。
+  if(r.coins>0 && !r.doubled) btn(92,735,356,45,`看廣告 銅錢加倍(+${r.coins})`,'addouble',{bg:'#2f6a4a',size:17});
+  else if(!r.win && offerLeft()>0) btn(92,735,356,45,`限時突破禮包(剩 ${Math.ceil(offerLeft()/60000)} 分鐘)`,'gooffer',{bg:'#a0281e',size:17});
+  const next = r.win && r.sub !== undefined ? [r.sub===SUBN-2 ? '挑戰首領':'下一小關','next'] :
+    r.win && S.stage < STAGES.length-1 && (!S.hard || hardOpen(S.stage+1)) ? ['下一關','next'] : ['再戰一次','retry'];
+  btn(105,796,330,65,next[0],next[1],{size:28});
+  btn(48,873,211,49,r.win && next[1]==='next' ? (r.stars<3 && r.sub===undefined ? '再戰拿三星':'再戰一次') : '再次挑戰','retry',{bg:'#785525',size:18});
+  btn(281,873,211,49,'回到地圖','map',{bg:'#4a3b2a',size:18});
+  ctx.restore();
 }
 function drawPause() {
   dim(0.65);
@@ -5031,8 +5059,10 @@ let upBack = 'title';
 const SUBS = ['upgrade', 'bag', 'gacha', 'daily', 'account', 'shop', 'pass', 'achv', 'forge', 'skins', 'settings', 'idle', 'mail', 'event', 'pawn'];
 function toLogical(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
 function doAct(a) {
+  if (uiPreviewActive && !a.startsWith('resultpage:')) return; // 預覽只允許翻頁，阻止任何真實遊戲行動與獎勵
   ui = [];   // 畫面切換後舊按鈕失效，等下一幀重建
   sfx('click');
+  if (a.startsWith('resultpage:')) { S.resultPage = clamp((S.resultPage || 0) + Number(a.slice(11)), 0, 99); return; }
   if (a.startsWith('locked:')) { const k = a.slice(7); toast(`通關 ${featNeed(k)} 後開啟「${FNAME[k]}」`); return; }
   if (FEAT[a] !== undefined && !featOpen(a)) { toast(`通關 ${featNeed(a)} 後開啟「${FNAME[a]}」`); return; }
   if (a === 'first') { S.wantHard = false; S.wantSub = 0; startStage(0); return; }
@@ -5179,6 +5209,7 @@ const endDrag = e => { if (e && e.pointerId !== undefined && drag.on && e.pointe
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 window.addEventListener('keydown', e => {
   if (S.modal) { if (e.key === 'Escape') closeForm(); return; }
+  if (uiPreviewActive) { if (e.key === 'Escape') closeUiPreview(); return; }
   audioInit();
   const k = e.key;
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true;
@@ -5208,8 +5239,16 @@ if (CLOUD.on) cloudSync();
 
 // ---------- 主迴圈 ----------
 // V10 optional performance overlay: append ?perf=1 to URL; off by default.
-const JH_PERF_DEBUG = /[?&]perf=1(?:&|$)/.test(location.search);
-const JH_FRAME = { frames: 0, ms: 0, updateMs: 0, drawMs: 0, fps: 0, avgUpdate: 0, avgDraw: 0, samples: 0, lastStats: performance.now() };
+let JH_PERF_DEBUG = /[?&]perf=1(?:&|$)/.test(location.search);
+const JH_FRAME = { frames: 0, ms: 0, updateMs: 0, drawMs: 0, fps: 0, avgUpdate: 0, avgDraw: 0, samples: 0, lastStats: performance.now(), history: [], spikes: 0, maxFrameMs: 0, frameChecks: 0 };
+// V11: only keep the most recent 60 one-second samples; no telemetry or network uploads.
+function jhPerfReport() {
+  const a = JH_FRAME.history, avg = k => a.length ? +(a.reduce((t, x) => t + x[k], 0) / a.length).toFixed(1) : null;
+  const percentile = (k, p) => { if (!a.length) return null; const b = a.map(x => x[k]).sort((x, y) => x - y); return +b[Math.floor((b.length - 1) * p)].toFixed(1); };
+  return { build: BUILD, sampleSeconds: a.length, avgFPS: avg('fps'), minFPS: a.length ? Math.min(...a.map(x => x.fps)) : null, p95DrawMs: percentile('draw', .95), avgUpdateMs: avg('update'), avgDrawMs: avg('draw'), framesOver50Ms: JH_FRAME.spikes, maxFrameMs: +JH_FRAME.maxFrameMs.toFixed(1), dpr: view.d, qualityLow: PERF.autoLow, qualityMaxDpr: PERF.dmax, enemies: S.enemies.length, bullets: S.bullets.length, effects: S.fx.length };
+}
+// F8 toggles diagnostic overlay on desktops. No gameplay keys or touch targets changed.
+window.addEventListener('keydown', e => { if (e.key === 'F8') { e.preventDefault(); JH_PERF_DEBUG = !JH_PERF_DEBUG; JH_FRAME.lastStats = performance.now(); } });
 function jhPerfOverlay() {
   if (!JH_PERF_DEBUG || S.mode !== 'play') return;
   ctx.save();
@@ -5219,7 +5258,7 @@ function jhPerfOverlay() {
   ctx.fillText('FPS ' + JH_FRAME.fps + ' | DPR ' + view.d.toFixed(2), 16, 110);
   ctx.fillText('Update ' + JH_FRAME.avgUpdate.toFixed(1) + 'ms | Draw ' + JH_FRAME.avgDraw.toFixed(1) + 'ms', 16, 132);
   ctx.fillText('Enemies ' + S.enemies.length + ' | Bullets ' + S.bullets.length, 16, 154);
-  ctx.fillText('FX ' + S.fx.length + ' | Text ' + S.texts.length, 16, 176);
+  ctx.fillText('FX ' + S.fx.length + ' | Spikes ' + JH_FRAME.spikes, 16, 176);
   ctx.restore();
 }
 let last = performance.now();
@@ -5236,8 +5275,13 @@ function loop(now) {
   // 長時間分頁凍結、裝置休眠或偵錯器暫停後，不把單次延遲當作持續卡頓。
   if (elapsed > 250) { PERF.acc = 0; PERF.n = 0; PERF.warm = 0; }
   else perfTick(elapsed);
-  if (Math.abs(Math.min(window.devicePixelRatio || 1, wantDmax()) - view.d) > 0.01) resize();
+  // V11: DPR changes are rare; avoid querying device pixel ratio on every animation frame.
+  if (++JH_FRAME.frameChecks >= 30) {
+    JH_FRAME.frameChecks = 0;
+    if (Math.abs(Math.min(window.devicePixelRatio || 1, wantDmax()) - view.d) > 0.01) resize();
+  }
   if (JH_PERF_DEBUG) {
+    if (elapsed > 50 && elapsed < 10000) { JH_FRAME.spikes++; JH_FRAME.maxFrameMs = Math.max(JH_FRAME.maxFrameMs, elapsed); }
     const u0 = performance.now(); update(dt);
     const d0 = performance.now(); draw();
     const d1 = performance.now();
@@ -5247,6 +5291,8 @@ function loop(now) {
       JH_FRAME.fps = Math.round(JH_FRAME.frames * 1000 / (d1 - JH_FRAME.lastStats));
       JH_FRAME.avgUpdate = JH_FRAME.updateMs / Math.max(1, JH_FRAME.samples);
       JH_FRAME.avgDraw = JH_FRAME.drawMs / Math.max(1, JH_FRAME.samples);
+      JH_FRAME.history.push({ fps: JH_FRAME.fps, update: JH_FRAME.avgUpdate, draw: JH_FRAME.avgDraw });
+      if (JH_FRAME.history.length > 60) JH_FRAME.history.shift();
       JH_FRAME.frames = JH_FRAME.samples = JH_FRAME.updateMs = JH_FRAME.drawMs = 0;
       JH_FRAME.lastStats = d1;
     }
@@ -5256,9 +5302,56 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
+// ---------- V12 結算專用安全預覽：僅 ?uitest=1 開啟，不呼叫 endRun / persist / showAd ----------
+let uiPreviewActive = false, uiPreviewBackup = null;
+function closeUiPreview() {
+  if (!uiPreviewActive || !uiPreviewBackup) return;
+  const b = uiPreviewBackup;
+  for (const k of Object.keys(b)) S[k] = b[k];
+  uiPreviewActive = false; uiPreviewBackup = null;
+  ui = []; S._resultPageFor = null;
+}
+function showUiPreview(kind) {
+  if (!UI_TEST_MODE) return;
+  if (!uiPreviewActive) {
+    uiPreviewBackup = {};
+    for (const k of ['mode','result','resultPage','_resultPageFor','stage','sub','hard','paused','guide','pick','modal','ad','shake']) uiPreviewBackup[k] = S[k];
+  }
+  uiPreviewActive = true;
+  const many = kind === 'many', fail = kind === 'fail';
+  S.mode = 'result'; S.stage = 0; S.sub = undefined; S.hard = false;
+  S.paused = false; S.guide = null; S.pick = null; S.shake = 0;
+  S.result = {
+    win: !fail, stars: fail ? 0 : 2, coins: fail ? 56 : 204, gems: fail ? 0 : 77,
+    kills: fail ? 35 : 116, units: fail ? 0 : 16, frag: fail ? 0 : 14,
+    pxp: fail ? 35 : 176, lvUp: false, doubled: false,
+    drop: fail ? null : { key: 'bot0', isNew: true },
+    drop2: many ? { key: 'hlm0', isNew: true } : null,
+    myth: null, old: many ? '鏢局遺失的玉佩' : null,
+    chal: many ? {ok:true,g:30,txt:''} : fail ? {ok:false,txt:'通關時分身 ≥ 70'} : null,
+    feats: many ? ['修練','行囊','召喚閣','每日'] : ['修練'],
+    unlock: many ? '刀客' : null,
+    bossPct: fail ? 24 : null, prog: fail ? 76 : 100,
+    hard: false, sub: undefined
+  };
+  S.resultPage = 0; S._resultPageFor = null; ui = [];
+}
+function installUiTestButtons() {
+  if (!UI_TEST_MODE) return;
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;z-index:2147483000;top:8px;left:8px;max-width:calc(100vw - 16px);font:14px sans-serif;color:#fff;display:flex;flex-wrap:wrap;gap:5px;align-items:center;pointer-events:auto';
+  const make = (label, fn) => { const b = document.createElement('button'); b.type='button'; b.textContent=label; b.style.cssText='padding:9px 11px;background:#153e34;color:white;border:1px solid #dfc17b;border-radius:8px;cursor:pointer;font:600 13px sans-serif'; b.addEventListener('click',fn); return b; };
+  const actions = document.createElement('div'); actions.style.cssText='display:none;flex-wrap:wrap;gap:5px';
+  const toggle = make('🧪 結算測試',()=>{actions.style.display=actions.style.display==='none'?'flex':'none';}); panel.appendChild(toggle);
+  for (const [label,kind] of [['一般勝利','normal'],['獎勵很多','many'],['失敗結算','fail']]) actions.appendChild(make(label,()=>{showUiPreview(kind); actions.style.display='none'; toggle.textContent='🧪 切換測試'; exit.style.display='inline-block';}));
+  const exit = make('返回原畫面',()=>{closeUiPreview();exit.style.display='none';toggle.textContent='🧪 結算測試';actions.style.display='none';}); exit.style.display='none';
+  panel.appendChild(actions);panel.appendChild(exit);document.body.appendChild(panel);
+}
+installUiTestButtons();
+
 // ---------- 測試介面 ----------
 window.JH = {
-  S, build: BUILD, STAGES, get perfStats() { return { fps: JH_FRAME.fps, updateMs: JH_FRAME.avgUpdate, drawMs: JH_FRAME.avgDraw, dpr: view.d, enemies: S.enemies.length, bullets: S.bullets.length }; },
+  S, build: BUILD, STAGES, perfReport: jhPerfReport, get perfStats() { return { fps: JH_FRAME.fps, updateMs: JH_FRAME.avgUpdate, drawMs: JH_FRAME.avgDraw, dpr: view.d, enemies: S.enemies.length, bullets: S.bullets.length }; },
   get save() { return save; }, CHUNKS, evToday, mailList, get evq() { return EVQ; }, EVENTS, set evOverride(v) { EV_OVERRIDE = v; }, chunkReady, startStage,
   pull: pullPet, pullPet, ownTotal, idleHours, clockGuard, synth, petBonus, PETS, hurt, grant, eqVal, track, dailyCheck, cloudSync, ACCT, get cloud() { return CLOUD; }, closeForm,
   start(stage = 0, cls, sub = SUBN - 1) { if (cls) save.cls = cls; S.wantSub = sub; newRun(stage); },
