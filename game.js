@@ -2699,6 +2699,7 @@ function drawGatesArt() {   // 每一邊一座牌坊，布幔顏色代表好壞�
       const gw = W / 2 - SIDE + 18, gh = gw * a.h / a.w, cx = side === 'L' ? SIDE + (W / 2 - SIDE) / 2 : W / 2 + (W / 2 - SIDE) / 2;
       const top = g.y - gh * 0.46;   // 布幔中心對齊門的判定線
       ctx.drawImage(sprCache(good ? 'ui_gate_b' : 'ui_gate_r', a, Math.round(gh)).cv, cx - gw / 2, top, gw, gh);
+      jhUiGateAccent(cx,g.y,gw,good,on);
       ctx.font = `30px ${NFONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = good ? '#0d2f66' : '#5a0d0a'; ctx.strokeText(gateLabel(gt), cx, g.y + 1);
       ctx.fillStyle = '#fff'; ctx.fillText(gateLabel(gt), cx, g.y + 1);
@@ -3113,9 +3114,28 @@ function drawTutorial() {
   ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(hx, hy, 28 + (S.t * 40 % 16), 0, 6.283); ctx.stroke();
   ctx.globalAlpha = 1;
 }
+// UI v1: draw-only decorative layers; no gameplay or hitbox changes.
+function jhUiFrame(x,y,w,h,r=12) {
+  ctx.save();
+  const gr=ctx.createLinearGradient(0,y,0,y+h);
+  gr.addColorStop(0,'rgba(30,43,37,.94)'); gr.addColorStop(1,'rgba(13,22,20,.94)');
+  ctx.fillStyle=gr; roundRect(x,y,w,h,r); ctx.fill();
+  ctx.strokeStyle='rgba(216,183,111,.88)';ctx.lineWidth=1.6;roundRect(x+.8,y+.8,w-1.6,h-1.6,r);ctx.stroke();
+  ctx.strokeStyle='rgba(255,235,176,.16)';ctx.lineWidth=1;roundRect(x+5,y+5,w-10,h-10,Math.max(3,r-4));ctx.stroke();
+  ctx.restore();
+}
+function jhUiGateAccent(cx,cy,gw,good,on) {
+  ctx.save();
+  const x=cx-gw*.4,y=cy-28,w=gw*.8,h=56;
+  ctx.fillStyle=good?'rgba(12,60,57,.82)':'rgba(79,31,29,.82)';roundRect(x,y,w,h,8);ctx.fill();
+  ctx.strokeStyle=good?'#b7d9b2':'#e7ac8b';ctx.lineWidth=2;roundRect(x+2,y+2,w-4,h-4,7);ctx.stroke();
+  if(on){ctx.strokeStyle=good?'rgba(218,255,210,.8)':'rgba(255,194,146,.8)';ctx.lineWidth=3;roundRect(x-3,y-3,w+6,h+6,10);ctx.stroke();}
+  ctx.restore();
+}
 function drawHud() {
   const f = S.endless ? clamp(1 - (S.nextBoss - S.t) / ENDLESS_GAP, 0, 1) : clamp(S.t / ST().len, 0, 1);
   if (!three('ui_hud_top', 12, 10, 436, 60, 110)) { ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(20, 16, 420, 52, 12); ctx.fill(); }
+  jhUiFrame(20, 16, 420, 52, 11);
   ctx.font = `bold 14px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f5d27a';
   ctx.fillText(S.endless ? `無盡試煉　第 ${S.wave} 波(最高 ${save.endless.best})` : S.tower ? `試煉塔　第 ${S.tower} 層(最高 ${save.tower.best})` : S.weekly ? `每週首領　${WMODS.find(m => m.id === S.weekly.mod).name}` : `${S.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`, 32, 31);
   pbar(32, 44, 250, 10, f, '#f5d27a');
@@ -3126,7 +3146,8 @@ function drawHud() {
   if (!drawIcon('ui_round', W - 46, 42, 60)) { ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(W - 72, 16, 52, 52, 12); ctx.fill(); }
   ctx.fillStyle = '#3a1d04'; ctx.fillRect(W - 55, 29, 8, 26); ctx.fillRect(W - 43, 29, 8, 26); ctx.fillStyle = '#fff6e0'; ctx.fillRect(W - 54, 30, 6, 24); ctx.fillRect(W - 42, 30, 6, 24);
   if (!three('ui_hud_bot', 12, H - 58, W - 24, 46, 80)) { ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(20, H - 52, W - 40, 36, 10); ctx.fill(); }
-  ctx.fillStyle = '#fff'; ctx.font = `bold 17px ${FONT}`; ctx.textAlign = 'center';
+  jhUiFrame(20, H - 52, W - 40, 36, 9);
+  ctx.fillStyle = '#f8e6bb'; ctx.font = `bold 17px ${FONT}`; ctx.textAlign = 'center';
   const extra = (S.spread ? '  ' + (S.cls.id === 'sword' ? '散射' : '分裂') + 'Lv' + S.spread : '') + (S.pierce ? '  強化' : '') + (S.god ? '  【無敵】' : '');
   ctx.fillText(`${S.cls.name}　內力 ${Math.round(S.atk)}　身法 ${S.rate.toFixed(1)}/秒${extra}`, W / 2, H - 33);
   if (S.weekly && S.weekly.on) drawWeeklyHud();
