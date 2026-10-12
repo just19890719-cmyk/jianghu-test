@@ -3323,7 +3323,6 @@ function drawTitle() {
     if (starReady(c.id)) redDot(390, 386);
     btn(402, 382, 104, 36, '時裝', 'skins', { bg: '#5a2f7a', size: 15 });
   }
-  homeV2Section(436, '選擇門派');
   CLASSES.forEach((cc, i) => {
     const w = 76, h = 94, x = 22 + i * (w + 8), y = 440;
     const open = isUnlocked(cc), sel = cc.id === save.cls, planned = cc.atk !== undefined;
@@ -3346,6 +3345,8 @@ function drawTitle() {
     if (!open) { ctx.fillStyle = '#aaa'; ctx.font = `11px ${FONT}`; ctx.fillText(cc.paid ? '商城限定' : planned ? stageLabel(cc.unlock - 1) + ' 解鎖' : '未開放', x + w / 2, y + 86); }
     homeV2Frame(x+1,y+1,w-2,h-2,sel);
   });
+  // Render section title after class cards so the card sprites cannot cover it.
+  homeV2Section(430, '選擇門派');
   const fresh = save.cleared === 0;
   btn(W / 2 - 140, 550, 280, 70, fresh ? '開始第一戰' : '開始闖蕩', fresh ? 'first' : 'map', { size: 30 });
   homeV2StartAccent(W/2-140,550,280,70);
@@ -3354,13 +3355,14 @@ function drawTitle() {
   if (featOpen('mail')) sideBtn(W - 112, 548, 'mail', '信箱', mailHasClaim());
   if (featOpen('event')) sideBtn(W - 112, 660, 'event', evToday().name, false);
   if (featOpen('pawn')) sideBtn(22, 660, 'pawn', '聚寶當鋪', pawnFree() || save.pawn.bag.length > 0);
-  homeV2Section(628, '江湖事務');
   fbtn(W / 2 - 140, 634, 135, 56, '修練', 'upgrade', { bg: '#2f5a8a', size: 23 });
   fbtn(W / 2 + 5, 634, 135, 56, '行囊', 'bag', { bg: '#2f6a4a', size: 23 });
   if (fbtn(W / 2 - 140, 702, 135, 56, '召喚閣', 'gacha', { bg: '#5a2f7a', size: 23 }) && (petFreeOk() || synthReady())) redDot(W / 2 - 11, 706);
   if (fbtn(W / 2 + 5, 702, 135, 56, '每日', 'daily', { bg: '#c0392b', size: 23 }) && dailyHasClaim()) redDot(W / 2 + 134, 706);
   if (fbtn(W / 2 - 140, 770, 135, 52, '商城', 'shop', { bg: '#a0731a', size: 23 }) && shopHasClaim()) redDot(W / 2 - 11, 774);
   if (fbtn(W / 2 + 5, 770, 135, 52, '俠客令', 'pass', { bg: '#7a5a1a', size: 23 }) && passClaimable()) redDot(W / 2 + 134, 774);
+  // Render section title after function-button sprites for guaranteed visibility.
+  homeV2Section(628, '江湖事務');
   homeV2Section(838, '行走江湖');
   moneyTag(852);
   ctx.textAlign = 'center'; ctx.font = `15px ${FONT}`; ctx.fillStyle = '#ddd';
