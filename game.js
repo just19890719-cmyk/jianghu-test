@@ -1739,6 +1739,7 @@ function drawSkills() {
 }
 function drawCorpses() {
   for (const c of S.corpses || []) {
+    if (!jhV8Visible(c.x, c.y, 180)) continue;
     const a = spr(c.k); if (!a) continue;
     const d = ED[c.k], f = 1 - c.t / 0.5, wc = sprCache(c.k, a, d.sh, true), cc = sprCache(c.k, a, d.sh);
     ctx.save(); ctx.globalAlpha = Math.max(0, f); ctx.translate(c.x, c.y); ctx.rotate(c.r); const s2 = 0.6 + f * 0.4; ctx.scale(s2, s2);
@@ -1889,9 +1890,10 @@ function dmgSprite(t, crit, sz) {
   c = { cv, w, h, cy }; DMGC.set(key, c); return c;
 }
 function drawHitFx() {
-  for (const c of S.coinFx) drawIcon('ico_coin', c.x, c.y, 18);
+  for (const c of S.coinFx) if (jhV8Visible(c.x, c.y, 32)) drawIcon('ico_coin', c.x, c.y, 18);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   for (const d of S.dmg) {
+    if (!jhV8Visible(d.x, d.y, 120)) continue;
     const age = d.max - d.life, pop = age < 0.12 ? 1 + (0.12 - age) * (d.crit ? 7 : 3) : 1;
     ctx.globalAlpha = clamp(d.life * 3, 0, 1);
     const T = dmgSprite(fmtDmg(d.v), d.crit, d.crit ? 32 : d.v >= 1000 ? 24 : 20);   // 預先畫好的數字圖，每幀只貼圖(手機省很多)
@@ -2700,9 +2702,14 @@ function drawGatesArt() {   // 每一邊一座牌坊，布幔顏色代表好壞�
       const top = g.y - gh * 0.46;   // 布幔中心對齊門的判定線
       ctx.drawImage(sprCache(good ? 'ui_gate_b' : 'ui_gate_r', a, Math.round(gh)).cv, cx - gw / 2, top, gw, gh);
       jhUiGateAccent(cx,g.y,gw,good,on);
-      ctx.font = `30px ${NFONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = good ? '#0d2f66' : '#5a0d0a'; ctx.strokeText(gateLabel(gt), cx, g.y + 1);
-      ctx.fillStyle = '#fff'; ctx.fillText(gateLabel(gt), cx, g.y + 1);
+      // V6: 長技能名稱限制在門牌內，不改變技能或門的碰撞判定。
+      const gateText = gateLabel(gt), gateTextWidth = Math.max(64, gw - 28);
+      ctx.save();
+      ctx.font = `bold 30px ${NFONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = good ? '#0d2f36' : '#541c18';
+      ctx.strokeText(gateText, cx, g.y + 1, gateTextWidth);
+      ctx.fillStyle = '#fff8e7'; ctx.fillText(gateText, cx, g.y + 1, gateTextWidth);
+      ctx.restore();
       ctx.globalAlpha = 1;
       if (on) { const pz = 0.5 + 0.5 * Math.sin(AT * 10); ctx.strokeStyle = good ? `rgba(140,230,255,${0.5 + pz * 0.5})` : `rgba(255,140,120,${0.5 + pz * 0.5})`; ctx.lineWidth = 4; roundRect(cx - gw * 0.4, g.y - g.h * 0.42, gw * 0.8, g.h * 0.84, 8); ctx.stroke(); }
     }
@@ -2720,9 +2727,12 @@ function drawGatesOld() {
       else { grd.addColorStop(0, 'rgba(235,90,70,.82)'); grd.addColorStop(1, 'rgba(170,35,30,.82)'); }
       ctx.fillStyle = grd; ctx.fillRect(x0, top, w, g.h);
       ctx.fillStyle = good ? 'rgba(200,235,255,.5)' : 'rgba(255,210,200,.5)'; ctx.fillRect(x0, top + 4, w, 3); ctx.fillRect(x0, top + g.h - 7, w, 3);
-      ctx.font = `30px ${NFONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = 5; ctx.strokeStyle = good ? '#0d2f66' : '#5a0d0a'; ctx.strokeText(gateLabel(gt), x0 + w / 2, g.y + 1);
-      ctx.fillStyle = '#fff'; ctx.fillText(gateLabel(gt), x0 + w / 2, g.y + 1);
+      // V6: 無牌坊素材時的備援門也維持相同文字安全寬度。
+      const gateText = gateLabel(gt), gateTextWidth = Math.max(64, w - 24);
+      ctx.save(); ctx.font = `bold 30px ${NFONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5; ctx.strokeStyle = good ? '#0d2f66' : '#5a0d0a';
+      ctx.strokeText(gateText, x0 + w / 2, g.y + 1, gateTextWidth);
+      ctx.fillStyle = '#fff8e7'; ctx.fillText(gateText, x0 + w / 2, g.y + 1, gateTextWidth); ctx.restore();
     }
     // 牌坊：柱子＋屋簷
     for (const px of [SIDE - 6, W / 2 - 6, W - SIDE - 6]) {
@@ -2740,6 +2750,7 @@ function hpBar(x, y, w, f, col) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect
 function drawBarrels() {
   for (const b of S.barrels) {
     const x = b.x, y = b.y, r = b.r;
+    if (!jhV8Visible(x, y, Math.max(96, r * 3))) continue;
     ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(x, y + r * 0.85, r, r * 0.35, 0, 0, 6.283); ctx.fill();
     if (drawIcon('ico_jar', x, y - 4, r * 2.7)) { if (b.hp < b.max) hpBar(x, y - r * 1.6, 36, b.hp / b.max, '#ffcf4a'); continue; }
     ctx.fillStyle = '#7a4a24'; ctx.beginPath(); ctx.ellipse(x, y + 2, r * 0.95, r * 0.9, 0, 0, 6.283); ctx.fill();
@@ -2754,6 +2765,8 @@ function drawBarrels() {
 }
 function drawEnemies() {
   for (const e of S.enemies) {
+    // V10: skip rendering enemies completely outside the view, keep physics untouched.
+    if (!jhV8Visible(e.x, e.y, 180)) continue;
     const d = ED[e.type], a = spr(e.type);
     ctx.globalAlpha = d.phase && !e.vis ? 0.22 : 1;
     ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + e.r * 0.8, e.r, e.r * 0.4, 0, 0, 6.283); ctx.fill();
@@ -2937,9 +2950,10 @@ function fxDraw(k, x, y, w, rot = 0, alpha = 1, sx = 1, sy = 1) {   // 畫美術
 }
 function addSpark(x, y, col) { if (S.sparks.length < 36 && !fxLow()) S.sparks.push({ x, y, a: Math.random() * 3.14, t: 0.16, col }); }
 function drawSparks() {   // 打中的十字火花
-  if (spr('fx_spark')) { for (const p of S.sparks) { const f = p.t / 0.16; fxDraw('fx_spark', p.x, p.y, 22 + (1 - f) * 26, p.a, f); } for (const p of S.pops || []) { const f = p.t / 0.35; fxDraw('fx_b_burst', p.x, p.y, p.w * (1.2 - f * 0.6), 0, f * 0.9); } return; }
+  if (spr('fx_spark')) { for (const p of S.sparks) { if (!jhV8Visible(p.x, p.y, 72)) continue; const f = p.t / 0.16; fxDraw('fx_spark', p.x, p.y, 22 + (1 - f) * 26, p.a, f); } for (const p of S.pops || []) { if (!jhV8Visible(p.x, p.y, Math.max(96, p.w || 0))) continue; const f = p.t / 0.35; fxDraw('fx_b_burst', p.x, p.y, p.w * (1.2 - f * 0.6), 0, f * 0.9); } return; }
   ctx.lineCap = 'round';
   for (const p of S.sparks) {
+    if (!jhV8Visible(p.x, p.y, 72)) continue;
     const f = p.t / 0.16, L = 8 + (1 - f) * 16;
     ctx.globalAlpha = f; ctx.strokeStyle = p.col || '#fff6d0'; ctx.lineWidth = 3 * f + 1;
     ctx.beginPath();
@@ -2953,6 +2967,18 @@ function drawSquad() {
   const n = Math.min(S.units, 60), hy = HERO_Y, c = S.cls;
   if (S.slow > 0 && spr('fx_crystal')) { const R = squadR(); fxDraw('fx_frostring', S.hx, hy + 8, R * 2.4 + 30, 0, 0.85); fxDraw('fx_crystal', S.hx - R - 10, hy - 6, 34); fxDraw('fx_crystal', S.hx + R + 10, hy - 6, 34, 0, 1, -1, 1); }
   else if (S.slow > 0) { ctx.fillStyle = 'rgba(160,220,255,.35)'; ctx.beginPath(); ctx.ellipse(S.hx, hy + 8, squadR() + 10, squadR() * 0.6 + 14, 0, 0, 6.283); ctx.fill(); }
+  // V7: 主角位置標記畫在角色下方；固定 2 筆描線，不隨隊伍數量增加。
+  if (S.units > 0) {
+    ctx.save();
+    const markR = Math.min(32, Math.max(19, 18 * HS));
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(7,28,24,.78)';
+    ctx.beginPath(); ctx.ellipse(S.hx, hy + 13 * HS, markR + 3, 9 * HS + 3, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(240,203,112,.9)';
+    ctx.beginPath(); ctx.ellipse(S.hx, hy + 13 * HS, markR, 9 * HS, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   ctx.globalAlpha = 0.85;
   const a = spr(c.spr), cl = a && cloneSprite(c.spr, a), sp = swingP();
   for (const i of squadOrder(n)) {
@@ -2995,6 +3021,11 @@ function fxC(k, w, halo) {   // 子彈圖：依顯示寬度快取一次；halo�
   x.shadowColor = 'transparent'; x.drawImage(src, p * sc, p * sc, w * sc, h * sc);
   return (FXC[key] = { cv: c, w: w + p * 2, h: h + p * 2, s: sc });
 }
+// V8: 寬鬆畫面邊界剔除，僅影響繪製，不改碰撞/生命週期。
+// 額外留 96px 緩衝，避免大型飛行特效在畫面邊緣突然消失。
+function jhV8Visible(x, y, margin = 96) {
+  return x >= -margin && x <= W + margin && y >= -margin && y <= H + margin;
+}
 function drawShotsArt() {   // 大量子彈：直接設定變換矩陣，不用 save / restore，手機上比較省
   const c = S.cls, big = S.atk > c.atk * 3, M = ctx.getTransform(), k = M.a;
   const NB = S.bullets.length, lim = (c.id === 'blade' ? 30 : c.id === 'demon' ? 40 : 40) * (fxLow() ? 0.6 : 1), stride = Math.max(1, Math.ceil(NB / lim));   // 太多時只畫代表性的一部分(傷害照算)，大量刀氣重疊本來就看不出差別
@@ -3009,6 +3040,7 @@ function drawShotsArt() {   // 大量子彈：直接設定變換矩陣，不用 
   const SW = fxC('fx_b_sword', big ? 16 : 13, 1), BL = fxC('fx_b_blade', 66, 1), AR = fxC('fx_b_arrow', 13, 1), DT = fxC('fx_b_dart', 24, 1), OB = fxC('fx_b_orb', 30, 1);
   S.bullets.forEach((b, i) => {
     if (stride > 1 && i % stride) return;
+    if (!jhV8Visible(b.x, b.y)) return; // V8: 不畫畫面外的子彈
     if (b.k === 'line') { if (c.id !== 'healer') put(SW, b.x, b.y + 10, b.a, 0.82); }
     else if (b.k === 'arc') put(BL, b.x, b.y + 6, b.a + Math.PI + 0.47, clamp(b.life / b.max * 1.6, 0, 1));
     else if (b.k === 'arrow') put(AR, b.x, b.y + 16, b.a);
@@ -3019,16 +3051,16 @@ function drawShotsArt() {   // 大量子彈：直接設定變換矩陣，不用 
   ctx.setTransform(M);
   if (c.id === 'healer') {   // 醫仙的銀針維持細線(先畫一層深色外框)
     ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(10,30,24,.75)'; ctx.lineWidth = 10; ctx.beginPath();
-    for (const b of S.bullets) if (b.k === 'line') { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.024, b.y - b.vy * 0.024); }
+    for (const b of S.bullets) if (b.k === 'line' && jhV8Visible(b.x, b.y, 96)) { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.024, b.y - b.vy * 0.024); }
     ctx.stroke();
     ctx.strokeStyle = c.shot; ctx.globalAlpha = 0.6; ctx.lineWidth = 7; ctx.beginPath();
-    for (const b of S.bullets) if (b.k === 'line') { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.024, b.y - b.vy * 0.024); }
+    for (const b of S.bullets) if (b.k === 'line' && jhV8Visible(b.x, b.y, 96)) { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.024, b.y - b.vy * 0.024); }
     ctx.stroke(); ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath();
-    for (const b of S.bullets) if (b.k === 'line') { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.016, b.y - b.vy * 0.016); }
+    for (const b of S.bullets) if (b.k === 'line' && jhV8Visible(b.x, b.y, 96)) { ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.016, b.y - b.vy * 0.016); }
     ctx.stroke();
   }
   for (const sh of S.eshots) {   // 敵方暗器：火球、毒液、冰錐、火銃子彈
-    if (sh.wait > 0) continue;
+    if (sh.wait > 0 || !jhV8Visible(sh.x, sh.y)) continue;
     const kk = sh.freeze ? 'fx_e_ice' : sh.pool ? 'fx_e_poison' : sh.tvx !== undefined ? 'fx_e_bullet' : 'fx_e_fire';
     const w = Math.round(kk === 'fx_e_bullet' ? 9 : kk === 'fx_e_poison' ? sh.r * 2.4 : sh.r * 3.2), I = fxC(kk, w), rot = Math.atan2(sh.vy, sh.vx) - 1.5708, off = kk === 'fx_e_bullet' ? 14 : sh.r * 0.8;
     put(I, sh.x - Math.sin(rot) * -off * 0, sh.y - off, rot);
@@ -3078,10 +3110,10 @@ function drawShotsOld() {
   }
   // 魔教傳人黑炎
   const orb = orbSprite();
-  for (const b of S.bullets) if (b.k === 'orb') ctx.drawImage(orb, b.x - 18, b.y - 18, 36, 36);
+  for (const b of S.bullets) if (b.k === 'orb' && jhV8Visible(b.x, b.y)) ctx.drawImage(orb, b.x - 18, b.y - 18, 36, 36);
   // 敵方暗器
   for (const s of S.eshots) {
-    if (s.wait > 0) continue;
+    if (s.wait > 0 || !jhV8Visible(s.x, s.y)) continue;
     ctx.fillStyle = s.col; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 1.8, 0, 6.283); ctx.fill();
     ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.4, 0, 6.283); ctx.fill();
@@ -3089,6 +3121,8 @@ function drawShotsOld() {
 }
 function drawFx() {
   for (const p of S.fx) {
+    // 擴大圓環的剔除範圍，避免大範圍特效被裁掉。
+    if (!jhV8Visible(p.x, p.y, p.ring ? Math.max(96, p.r1 || 0) : Math.max(96, p.r || 0))) continue;
     const f = clamp(p.life / p.max, 0, 1);
     if (p.ring) {
       ctx.globalAlpha = f; ctx.strokeStyle = p.col; ctx.lineWidth = 2 + 5 * f;
@@ -3097,6 +3131,7 @@ function drawFx() {
   }
   ctx.globalAlpha = 1;
   for (const t of S.texts) {
+    if (!jhV8Visible(t.x, t.y, 160)) continue;
     ctx.globalAlpha = clamp(t.life * 1.6, 0, 1); ctx.font = `bold ${t.size}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(4, t.size * 0.26); ctx.strokeStyle = 'rgba(12,5,0,.95)'; ctx.strokeText(t.txt, t.x, t.y + t.size * 0.08); ctx.strokeText(t.txt, t.x, t.y); ctx.fillStyle = t.col; ctx.fillText(t.txt, t.x, t.y);
   }
@@ -3127,7 +3162,8 @@ function jhUiFrame(x,y,w,h,r=12) {
 function jhUiGateAccent(cx,cy,gw,good,on) {
   ctx.save();
   const x=cx-gw*.4,y=cy-28,w=gw*.8,h=56;
-  ctx.fillStyle=good?'rgba(12,60,57,.82)':'rgba(79,31,29,.82)';roundRect(x,y,w,h,8);ctx.fill();
+  // V5: 降低文字底牌的不透明度，保留門牌美術，提升文字辨識度。
+  ctx.fillStyle=good?'rgba(8,43,40,.70)':'rgba(68,24,23,.70)';roundRect(x,y,w,h,8);ctx.fill();
   ctx.strokeStyle=good?'#b7d9b2':'#e7ac8b';ctx.lineWidth=2;roundRect(x+2,y+2,w-4,h-4,7);ctx.stroke();
   if(on){ctx.strokeStyle=good?'rgba(218,255,210,.8)':'rgba(255,194,146,.8)';ctx.lineWidth=3;roundRect(x-3,y-3,w+6,h+6,10);ctx.stroke();}
   ctx.restore();
@@ -3137,7 +3173,10 @@ function drawHud() {
   if (!three('ui_hud_top', 12, 10, 436, 60, 110)) { ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(20, 16, 420, 52, 12); ctx.fill(); }
   jhUiFrame(20, 16, 420, 52, 11);
   ctx.font = `bold 14px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f5d27a';
-  ctx.fillText(S.endless ? `無盡試煉　第 ${S.wave} 波(最高 ${save.endless.best})` : S.tower ? `試煉塔　第 ${S.tower} 層(最高 ${save.tower.best})` : S.weekly ? `每週首領　${WMODS.find(m => m.id === S.weekly.mod).name}` : `${S.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`, 32, 31);
+  // V5: 限制關卡標題寬度，避免長章節名稱碰到右側銅錢區。
+  const battleStageName = S.endless ? `無盡試煉　第 ${S.wave} 波(最高 ${save.endless.best})` : S.tower ? `試煉塔　第 ${S.tower} 層(最高 ${save.tower.best})` : S.weekly ? `每週首領　${WMODS.find(m => m.id === S.weekly.mod).name}` : `${S.hard ? '困難　' : ''}${stageLabel(S.stage)}　${ST().name}`;
+  ctx.save(); ctx.beginPath(); ctx.rect(30, 18, 252, 24); ctx.clip();
+  ctx.fillText(battleStageName, 32, 31, 244); ctx.restore();
   pbar(32, 44, 250, 10, f, '#f5d27a');
   sealStamp(292, 49, 13, S.endless ? '首' : BOSSES[ST().boss].ch); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = `bold 18px ${FONT}`;
   ctx.save(); const cp = S.coinPulse > 0 ? 1 + S.coinPulse * 2 : 1; ctx.translate(330, 42); ctx.scale(cp, cp);
@@ -3149,7 +3188,10 @@ function drawHud() {
   jhUiFrame(20, H - 52, W - 40, 36, 9);
   ctx.fillStyle = '#f8e6bb'; ctx.font = `bold 17px ${FONT}`; ctx.textAlign = 'center';
   const extra = (S.spread ? '  ' + (S.cls.id === 'sword' ? '散射' : '分裂') + 'Lv' + S.spread : '') + (S.pierce ? '  強化' : '') + (S.god ? '  【無敵】' : '');
-  ctx.fillText(`${S.cls.name}　內力 ${Math.round(S.atk)}　身法 ${S.rate.toFixed(1)}/秒${extra}`, W / 2, H - 33);
+  // V5: 保留所有能力資訊，文字依實際寬度縮放，避免突破 HUD 外框。
+  const battleStatsLabel = `${S.cls.name}　內力 ${Math.round(S.atk)}　身法 ${S.rate.toFixed(1)}/秒${extra}`;
+  ctx.save(); ctx.beginPath(); ctx.rect(30, H - 49, W - 60, 31); ctx.clip();
+  ctx.fillText(battleStatsLabel, W / 2, H - 33, W - 72); ctx.restore();
   if (S.weekly && S.weekly.on) drawWeeklyHud();
   if (S.synPop) { const P = S.synPop; P.t += 1 / 60; if (P.t > 1.8) S.synPop = null; else {   // 共鳴圖示特寫：彈出→停留→淡出
     const z = P.t < 0.2 ? P.t / 0.2 * 1.2 : P.t < 0.32 ? 1.2 - (P.t - 0.2) / 0.12 * 0.2 : 1, a = clamp((1.8 - P.t) * 3, 0, 1);
@@ -5155,6 +5197,9 @@ window.addEventListener('keyup', e => {
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
 });
 document.addEventListener('visibilitychange', () => {
+  // V9: 背景切換後清空效能取樣，避免恢復時把背景停頓當成裝置卡頓。
+  PERF.acc = 0; PERF.n = 0; PERF.warm = 0;
+  JH_FRAME.frames = JH_FRAME.samples = JH_FRAME.updateMs = JH_FRAME.drawMs = 0; JH_FRAME.lastStats = performance.now();
   if (document.hidden && S.mode === 'play') S.paused = true;
   if (AU.ctx) { if (document.hidden) AU.ctx.suspend().catch(() => {}); else AU.ctx.resume().catch(() => {}); }   // 切到背景時停止聲音
   if (document.hidden && CLOUD.on && CLOUD.dirty && !CLOUD.busy) cloudPushSafe();
@@ -5162,18 +5207,58 @@ document.addEventListener('visibilitychange', () => {
 if (CLOUD.on) cloudSync();
 
 // ---------- 主迴圈 ----------
+// V10 optional performance overlay: append ?perf=1 to URL; off by default.
+const JH_PERF_DEBUG = /[?&]perf=1(?:&|$)/.test(location.search);
+const JH_FRAME = { frames: 0, ms: 0, updateMs: 0, drawMs: 0, fps: 0, avgUpdate: 0, avgDraw: 0, samples: 0, lastStats: performance.now() };
+function jhPerfOverlay() {
+  if (!JH_PERF_DEBUG || S.mode !== 'play') return;
+  ctx.save();
+  ctx.setTransform(view.s * view.d, 0, 0, view.s * view.d, 0, 0);
+  ctx.fillStyle = 'rgba(7,19,18,.82)'; ctx.fillRect(8, 102, 245, 92);
+  ctx.font = '15px monospace'; ctx.fillStyle = '#f5e8b6'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('FPS ' + JH_FRAME.fps + ' | DPR ' + view.d.toFixed(2), 16, 110);
+  ctx.fillText('Update ' + JH_FRAME.avgUpdate.toFixed(1) + 'ms | Draw ' + JH_FRAME.avgDraw.toFixed(1) + 'ms', 16, 132);
+  ctx.fillText('Enemies ' + S.enemies.length + ' | Bullets ' + S.bullets.length, 16, 154);
+  ctx.fillText('FX ' + S.fx.length + ' | Text ' + S.texts.length, 16, 176);
+  ctx.restore();
+}
 let last = performance.now();
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); perfTick(now - last); last = now;
+  const elapsed = Math.max(0, now - last);
+  last = now;
+  // V9: 隱藏分頁不更新、不繪製、不累計 FPS 樣本；恢復時不追趕背景時間。
+  if (document.hidden) {
+    PERF.acc = 0; PERF.n = 0; PERF.warm = 0;
+    requestAnimationFrame(loop);
+    return;
+  }
+  const dt = Math.min(0.05, elapsed / 1000);
+  // 長時間分頁凍結、裝置休眠或偵錯器暫停後，不把單次延遲當作持續卡頓。
+  if (elapsed > 250) { PERF.acc = 0; PERF.n = 0; PERF.warm = 0; }
+  else perfTick(elapsed);
   if (Math.abs(Math.min(window.devicePixelRatio || 1, wantDmax()) - view.d) > 0.01) resize();
-  update(dt); draw();
+  if (JH_PERF_DEBUG) {
+    const u0 = performance.now(); update(dt);
+    const d0 = performance.now(); draw();
+    const d1 = performance.now();
+    JH_FRAME.frames++; JH_FRAME.samples++;
+    JH_FRAME.updateMs += d0 - u0; JH_FRAME.drawMs += d1 - d0;
+    if (d1 - JH_FRAME.lastStats >= 1000) {
+      JH_FRAME.fps = Math.round(JH_FRAME.frames * 1000 / (d1 - JH_FRAME.lastStats));
+      JH_FRAME.avgUpdate = JH_FRAME.updateMs / Math.max(1, JH_FRAME.samples);
+      JH_FRAME.avgDraw = JH_FRAME.drawMs / Math.max(1, JH_FRAME.samples);
+      JH_FRAME.frames = JH_FRAME.samples = JH_FRAME.updateMs = JH_FRAME.drawMs = 0;
+      JH_FRAME.lastStats = d1;
+    }
+    jhPerfOverlay();
+  } else { update(dt); draw(); }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 // ---------- 測試介面 ----------
 window.JH = {
-  S, build: BUILD, STAGES,
+  S, build: BUILD, STAGES, get perfStats() { return { fps: JH_FRAME.fps, updateMs: JH_FRAME.avgUpdate, drawMs: JH_FRAME.avgDraw, dpr: view.d, enemies: S.enemies.length, bullets: S.bullets.length }; },
   get save() { return save; }, CHUNKS, evToday, mailList, get evq() { return EVQ; }, EVENTS, set evOverride(v) { EV_OVERRIDE = v; }, chunkReady, startStage,
   pull: pullPet, pullPet, ownTotal, idleHours, clockGuard, synth, petBonus, PETS, hurt, grant, eqVal, track, dailyCheck, cloudSync, ACCT, get cloud() { return CLOUD; }, closeForm,
   start(stage = 0, cls, sub = SUBN - 1) { if (cls) save.cls = cls; S.wantSub = sub; newRun(stage); },
